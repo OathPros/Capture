@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+artifacts/
+.playwright/
+TestResults/
+**/test-results/
+**/playwright-report/
