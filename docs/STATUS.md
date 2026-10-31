@@ -14,7 +14,7 @@ Screenshot display repair and an interactive screenshot editor, following the us
 - Core: 42 passed (including legacy migration, styling/crop validation and export privacy guards).
 - Editor unit: 5 passed. Browser: 7 passed (asset load/ready, actual pointer gestures, styling, clipboard/undo, crop/reset/reopen, errors/retry, permanent apply, existing document exports and offline HTML).
 - Full Windows-targeted solution compiles locally with zero warnings/errors.
-- Windows rendering/transaction and actual packaged-WebView2 preview checks are configured in CI; their new results must be verified before publishing readiness claims.
+- GitHub Actions Windows release run 41197652341 passed all 65 automated tests: 42 core, 11 Windows pixel/transaction, 5 editor unit and 7 browser tests. The packaged WebView2 smoke test also passed native asset.read/checksum/CSP/SVG PNG decoding. Release v0.3.0-preview.1 is published.
 
 ## Remaining limits
 Interactive recording/hotkeys/UIA/mixed-DPI acceptance remains a separate manual gate. Blur uses a soft preview filter and native box blur; it is not a confidentiality guarantee. Solid redaction plus permanent apply is the privacy path. Crop is not redaction. No forensic erasure/external-backup removal is promised. Windows Graphics Capture replacement, manual image/region insertion, PDF, SQLite, richer migrations, signing and hosted integrations remain incomplete.
