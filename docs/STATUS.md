@@ -9,8 +9,8 @@ Version 4 quality-of-life update: meaningful capture text, fitted highlights, re
 - Copy HTML code renders the complete self-contained HTML document in memory. Copy steps for Word generates standard RTF with Unicode, bold field runs and embedded PNGs, plus plain-text fallback; it intentionally omits CF_HTML to avoid Word ignoring data-URL images. Native clipboard setting occurs on the UI STA after rendering succeeds. No temporary export files.
 - Schema 1.2 reads 1.0/1.1 and preserves original metadata before first upgrade save. Prior screenshot tools, export privacy guards and packaged WebView2 image-preview smoke check remain.
 
-## Validation in progress
-- Core, editor and Windows-targeted compilation checks are run with the pinned toolchain and lockfiles.
+## Verified
+- GitHub Actions Windows release run 41201180951 passed: 61 core tests, 16 Windows pixel/clipboard/control tests, 8 editor unit tests and 10 browser tests (95 total), full build, packaging and the real packaged-WebView2 screenshot decoding smoke check. Release v0.4.0-preview.1 is published. The pinned toolchain/lockfile scripts also passed locally.
 - Tests cover title/field cases, legacy details, negative-origin bounds, cut interval projection/validation, HTML/RTF/document formatting, actual cut pixels in DOCX/MD/HTML, native clipboard formats and a real Windows button/text field provider. The synthetic editable field has a deliberately sensitive-looking accessible name/value that must not be read into the title.
 - Browser checks exercise cut/apply/undo/reset, manual field formatting, copy-before-save with no export dialog, clipboard error recovery and existing screenshot tools.
 - The exact Word clipboard RTF opened and rendered in LibreOffice with its screenshot and bold field labels. Microsoft Word's paste preference can override rich formatting; use Keep Source Formatting.
