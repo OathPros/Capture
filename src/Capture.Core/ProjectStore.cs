@@ -11,6 +11,11 @@ public sealed class ProjectStore(string root)
         var json = GuideJson.Serialize(g);
         var dir = DirectoryFor(g.Id); Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, "guide.json");
+        if(File.Exists(path) && !File.Exists(Path.Combine(dir,"guide.v1.0.backup.json")))
+        {
+            using var existing=System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(path));
+            if(existing.RootElement.GetProperty("schemaVersion").GetString()=="1.0.0") File.Copy(path,Path.Combine(dir,"guide.v1.0.backup.json"));
+        }
         var temp = path + ".tmp";
         await File.WriteAllTextAsync(temp, json);
         File.Move(temp, path, true);
@@ -36,6 +41,7 @@ public sealed class ProjectStore(string root)
     public async Task ExportPortableAsync(Guide g, string target)
     {
         g = GuideJson.Parse(GuideJson.Serialize(g));
+        GuideJson.EnsurePrivacyApplied(g);
         var referenced = g.Steps.Where(s=>s.AssetId is not null).Select(s=>s.AssetId).ToHashSet();
         g.Assets = g.Assets.Where(a=>referenced.Contains(a.Id)).ToList();
         using var file = new FileStream(target, FileMode.CreateNew);

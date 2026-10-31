@@ -12,4 +12,11 @@ Use Windows 11 x64, WebView2 Runtime and fictional data. Record OS/build, displa
 8. Run ten start/stop cycles and 100 clicks; observe responsiveness and bounded memory. Try inaccessible UIA, protected/elevated windows and a stalled provider; verify safe fallback/warning and restart instruction. Do not attempt to bypass protected surfaces.
 9. Keyboard-navigate editor controls, review focus visibility, text scaling and high-contrast behavior. Verify export instructions and screenshots visually in a compatible Markdown viewer.
 
-PDF, redaction/crop, manual screenshots and hosted integrations are not implemented; do not mark those specification gates passed.
+PDF, manual screenshots and hosted integrations are not implemented; do not mark those specification gates passed.
+
+## Screenshot editor acceptance
+1. Open an existing recorded guide in the new build. Confirm PNGs are visible, step switching works and missing files produce a specific error/Retry.
+2. Draw each tool; move/resize, change fill/outline/text colour, stroke/font size and shadow. Cut/copy/paste/delete, undo/redo, zoom, crop/reset and reopen. Check alignment at mixed DPI.
+3. Export DOCX/MD/HTML; verify styles, text and cropped screenshots. Crop is not redaction and portable source images can be uncropped.
+4. With synthetic sensitive patterns only, add blur/redaction; verify export is blocked until permanent apply. Confirm shared steps update, Undo clears and the old managed image is removed. Verify portable packages contain only sanitized referenced assets. Simulate failed saves/cleanup and retry. Existing external backups are not erased.
+5. Windows CI separately runs synthetic GDI pixel tests and a packaged-WebView2 PNG decoding smoke test. Those do not prove real desktop capture timing or privacy behavior.

@@ -12,7 +12,7 @@ using Microsoft.Web.WebView2.Core;
 namespace Capture.App;
 public partial class MainWindow : Window
 {
-    private readonly ProjectStore store = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Capture","Projects"));
+    private readonly ProjectStore store = new(ScreenshotSmoke.Enabled ? Path.Combine(ScreenshotSmoke.Root,"Projects") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Capture","Projects"));
     private readonly Session session = new();
     private readonly System.Windows.Forms.NotifyIcon tray = new();
     private Recorder? recorder;
@@ -23,7 +23,7 @@ public partial class MainWindow : Window
     private TaskCompletionSource? flushCompletion;
     private uint hotkey = 0x52;
     private string[] exclusions = ["1password", "keepass", "bitwarden", "lastpass", "credential", "lockapp", "logonui"];
-    private readonly string settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Capture","settings.json");
+    private readonly string settingsFile = ScreenshotSmoke.Enabled ? Path.Combine(ScreenshotSmoke.Root,"settings.json") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Capture","settings.json");
     public MainWindow()
     {
         InitializeComponent();
@@ -36,6 +36,7 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(store.Root);
+            if(ScreenshotSmoke.Enabled) current=await ScreenshotSmoke.CreateAsync(store);
             if (File.Exists(settingsFile))
             {
                 try { var settings = JsonDocument.Parse(await File.ReadAllTextAsync(settingsFile)); hotkey = settings.RootElement.GetProperty("hotkey").GetUInt32(); exclusions = settings.RootElement.GetProperty("exclusions").Deserialize<string[]>() ?? exclusions; }
@@ -46,10 +47,10 @@ public partial class MainWindow : Window
             menu.Items.Add("Open Capture", null, (_,_) => { Show(); Activate(); });
             menu.Items.Add("Start / finish recording", null, async (_,_) => await ToggleAsync());
             menu.Items.Add("Exit", null, async (_,_) => await ExitAsync());
-            tray.ContextMenuStrip = menu; tray.DoubleClick += (_,_) => { Show(); Activate(); }; tray.Visible = true;
-            hotkeyRegistered = Native.RegisterHotKey(new WindowInteropHelper(this).Handle,1,0x4006,hotkey);
+            tray.ContextMenuStrip = menu; tray.DoubleClick += (_,_) => { Show(); Activate(); }; tray.Visible = !ScreenshotSmoke.Enabled;
+            hotkeyRegistered = ScreenshotSmoke.Enabled || Native.RegisterHotKey(new WindowInteropHelper(this).Handle,1,0x4006,hotkey);
             if (!hotkeyRegistered) MessageBox.Show("The capture shortcut is already in use. Start recording from Projects, or select another shortcut in Settings.","Shortcut unavailable");
-            var environment = await CoreWebView2Environment.CreateAsync(null,Path.Combine(Path.GetDirectoryName(settingsFile)!,"WebView2"));
+            var environment = await CoreWebView2Environment.CreateAsync(null,Path.Combine(Path.GetDirectoryName(settingsFile)!,"WebView2"),ScreenshotSmoke.Enabled ? new CoreWebView2EnvironmentOptions("--disable-gpu") : null);
             await Editor.EnsureCoreWebView2Async(environment);
             Editor.CoreWebView2.Settings.AreDevToolsEnabled = false;
             Editor.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
@@ -62,7 +63,7 @@ public partial class MainWindow : Window
             Editor.CoreWebView2.WebMessageReceived += HandleMessage;
             Editor.Source = new Uri("https://capture.local/index.html"); initialized = true;
         }
-        catch (Exception ex) { MessageBox.Show("Capture could not start. Install Microsoft Edge WebView2 Runtime if it is missing.\n\n"+ex.Message,"CAPTURE startup"); exiting=true; tray.Dispose(); System.Windows.Application.Current.Shutdown(1); }
+        catch (Exception ex) { if(ScreenshotSmoke.Enabled) { ScreenshotSmoke.Report("FAIL: "+ex.Message);exiting=true;tray.Dispose();System.Windows.Application.Current.Shutdown(1);return; } MessageBox.Show("Capture could not start. Install Microsoft Edge WebView2 Runtime if it is missing.\n\n"+ex.Message,"CAPTURE startup"); exiting=true; tray.Dispose(); System.Windows.Application.Current.Shutdown(1); }
     }
     private IntPtr WindowMessage(IntPtr hwnd,int msg,IntPtr w,IntPtr l,ref bool handled)
     {
@@ -83,12 +84,16 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.2.0-preview.1", guide = current, recording = session.State.ToString() },
+                "editor.ready" => new { version = "0.3.0-preview.1", guide = current, recording = session.State.ToString() },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "project.list" => await store.ListAsync(),
                 "project.open" => await OpenAsync(p.GetProperty("id").GetGuid()),
                 "project.save" => await SaveAsync(p),
+                "asset.read" => await ReadAssetAsync(p),
+                "asset.previewReady" => PreviewReady(p),
+                "asset.applyPixelEdits" => await ApplyPixelEditsAsync(p),
+                "asset.finishCleanup" => await FinishCleanupAsync(),
                 "project.new" => await NewAsync(),
                 "project.import" => await ImportAsync(),
                 "recording.toggle" => await ToggleFromBridgeAsync(),
@@ -125,7 +130,7 @@ public partial class MainWindow : Window
     {
         current = g;
         Directory.CreateDirectory(store.DirectoryFor(g.Id));
-        Editor.CoreWebView2.SetVirtualHostNameToFolderMapping("project.capture.local",store.DirectoryFor(g.Id),CoreWebView2HostResourceAccessKind.Allow);
+        // Screenshots are served through the validated asset.read bridge, not another virtual origin.
         return g;
     }
     private async Task<Guide> OpenAsync(Guid id) { RequireIdle(); return Select(await store.LoadAsync(id)); }
@@ -139,8 +144,46 @@ public partial class MainWindow : Window
     {
         RequireIdle(); if (current is null) throw new InvalidOperationException("Open a project first.");
         var g = GuideJson.Parse(payload.GetRawText());
-        if (g.Id != current.Id || JsonSerializer.Serialize(g.Assets,GuideJson.Options) != JsonSerializer.Serialize(current.Assets,GuideJson.Options)) throw new InvalidDataException("Project or asset identity changed.");
+        if (g.Id != current.Id || JsonSerializer.Serialize(g.Assets,GuideJson.Options) != JsonSerializer.Serialize(current.Assets,GuideJson.Options) || !g.PendingAssetDeletes.SequenceEqual(current.PendingAssetDeletes)) throw new InvalidDataException("Project or asset identity changed.");
         g.UpdatedAt = DateTimeOffset.UtcNow; await store.SaveAsync(g); current = g; return new { saved = true };
+    }
+    private object PreviewReady(JsonElement payload)
+    {
+        if(current is null || payload.GetProperty("projectId").GetGuid()!=current.Id || !current.Assets.Any(a=>a.Id==payload.GetProperty("assetId").GetString() && a.Width==payload.GetProperty("width").GetInt32() && a.Height==payload.GetProperty("height").GetInt32())) throw new InvalidDataException("Invalid screenshot preview acknowledgement.");
+        if(ScreenshotSmoke.Enabled) Dispatcher.BeginInvoke(()=>
+        {
+            ScreenshotSmoke.Report("PASS: native asset.read, checksum validation, WebView2 bridge, CSP and SVG PNG preview decoded 640x360.");
+            exiting=true;tray.Dispose();Editor.Dispose();System.Windows.Application.Current.Shutdown(0);
+        });
+        return new { received=true };
+    }
+    private async Task<object> ReadAssetAsync(JsonElement payload)
+    {
+        if(current is null || payload.GetProperty("projectId").GetGuid()!=current.Id) throw new InvalidDataException("Open this screenshot's project first.");
+        var assetId=payload.GetProperty("assetId").GetString();
+        if(assetId is null || !current.Assets.Any(a=>a.Id==assetId)) throw new InvalidDataException("Screenshot not found in the current project.");
+        var snapshot=current;
+        var image=await ExportImageRenderer.ReadSourceAsync(snapshot,assetId,store.DirectoryFor(snapshot.Id));
+        return new { url="data:image/png;base64,"+Convert.ToBase64String(image.Png), width=image.Width,height=image.Height };
+    }
+    private async Task<object?> ApplyPixelEditsAsync(JsonElement payload)
+    {
+        RequireIdle();if(current is null) throw new InvalidOperationException("Open a project first.");
+        var assetId=payload.GetProperty("assetId").GetString();if(assetId is null || !current.Assets.Any(a=>a.Id==assetId))throw new InvalidDataException("Unknown screenshot.");
+        if(MessageBox.Show("Permanently apply ALL blur/redaction regions on this screenshot, including steps that share it? The original screenshot will be replaced and Undo history cleared. Existing exports and external backups are not erased. Blur is visual softening; use solid redaction for secrets. This cannot be undone.","Apply pixel edits permanently",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return null;
+        exporting=true;
+        try
+        {
+            current=await Task.Run(()=>PixelEditStorage.ApplyAsync(current,assetId,store));
+            try { current=await PixelEditStorage.CleanupAsync(current,store); return new { guide=current,warning=(string?)null }; }
+            catch(Exception ex) when(ex is IOException or UnauthorizedAccessException) { return new { guide=current,warning="The sanitized image is saved, but the original image could not be removed. Finish privacy cleanup before exporting." }; }
+        }
+        finally { exporting=false; }
+    }
+    private async Task<object> FinishCleanupAsync()
+    {
+        RequireIdle();if(current is null)throw new InvalidOperationException("Open a project first.");
+        current=await PixelEditStorage.CleanupAsync(current,store);return current;
     }
     private async Task<object> ToggleFromBridgeAsync() { await ToggleAsync(); return new { recording = session.State.ToString() }; }
     private async Task ToggleAsync()
@@ -201,7 +244,8 @@ public partial class MainWindow : Window
     private async Task<object> ExportAsync(string format)
     {
         RequireIdle(); if(current is null) throw new InvalidOperationException("Open a guide first.");
-        if (MessageBox.Show("Review all screenshots for sensitive information before exporting. This preview has no redaction tool. Export only material you are permitted to share.","Review before export",MessageBoxButton.OKCancel,MessageBoxImage.Warning) != MessageBoxResult.OK) return new { cancelled = true };
+        GuideJson.EnsurePrivacyApplied(current);
+        if (MessageBox.Show("Review all screenshots for sensitive information before exporting. Verify your edits and export only material you are permitted to share.","Review before export",MessageBoxButton.OKCancel,MessageBoxImage.Warning) != MessageBoxResult.OK) return new { cancelled = true };
         var extension = format switch { "portable" => ".capture", "markdown" => ".zip", "docx" => ".docx", "html" => ".html", _ => throw new InvalidDataException("Unsupported export format.") };
         var label = format switch { "docx" => "Word document", "html" => "HTML guide", "markdown" => "Markdown ZIP", _ => "Capture package" };
         var dialog = new Microsoft.Win32.SaveFileDialog { FileName="guide"+extension, Filter=$"{label}|*{extension}", DefaultExt=extension, InitialDirectory=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), OverwritePrompt=true };

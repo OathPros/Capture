@@ -31,3 +31,11 @@
 - Design: Open XML SDK for genuine DOCX; one shared, checksummed Windows PNG annotation renderer for DOCX/MD/HTML. Format projections stay in the cross-platform core and accept a renderer callback, processing one step at a time. The native host snapshots the guide, runs export off the UI thread and atomically replaces a user-selected destination after success.
 - HTML: One offline file with encoded plain text, base64 PNGs, no external dependencies, contents links, responsive/print styles and CSP. No scripts or dynamic document content.
 - Validation: OpenXmlValidator, Markdown/HTML parsers, portrait/landscape/12-step fixtures, text-only/missing-image tests, browser command and offline layout checks, actual Windows GDI pixel/immutability tests in CI. LibreOffice rendering provides additional document compatibility evidence; interactive Word and native dialogs remain manual checks.
+
+## ADR-007 — Screenshot tools and native image delivery
+- Date: 2026-10-31
+- Trigger: User's real Windows screenshot showed a broken image and requested direct Snagit-style annotation tools.
+- Choice: Replace cross-origin virtual-folder image loading with a narrow checksummed asset.read bridge and data URLs. Use an SVG original-image coordinate canvas with editable shapes, handles and properties; keep vectors/crop in the canonical model and render with GDI for all document formats. No general filesystem bridge or external image dependencies.
+- Privacy: Preview blur/redaction layers cannot be exported. Explicit permanent apply sanitizes a new asset, durably records cleanup intent, replaces shared-step references, deletes the old source, then clears the intent. Undo history is reset. Failed metadata save preserves the original; cleanup failures remain export-blocking and retryable. Crop stays reversible and does not imply redaction.
+- Compatibility: Read schema 1.0 and 1.1; write 1.1 with a legacy metadata backup. No promise of compatibility with older application binaries or forensic erasure.
+- Evidence: Geometry/schema/transaction/pixel/browser tests plus a real Windows WebView2 screenshot decoding smoke test. Interactive desktop capture still has its separate manual gate.

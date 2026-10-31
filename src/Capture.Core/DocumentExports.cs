@@ -18,6 +18,7 @@ public static class DocumentExports
     public static async Task MarkdownAsync(Guide guide, string target, Func<Step, Task<ExportImage>> render)
     {
         var snapshot = GuideJson.Parse(GuideJson.Serialize(guide));
+        GuideJson.EnsurePrivacyApplied(snapshot);
         await using var file = new FileStream(target, FileMode.CreateNew, FileAccess.ReadWrite);
         using var zip = new ZipArchive(file, ZipArchiveMode.Create);
         await using (var output = zip.CreateEntry("README.md").Open())
@@ -37,6 +38,7 @@ public static class DocumentExports
     public static async Task DocxAsync(Guide guide, string target, Func<Step, Task<ExportImage>> render)
     {
         var snapshot = GuideJson.Parse(GuideJson.Serialize(guide));
+        GuideJson.EnsurePrivacyApplied(snapshot);
         using var file = new FileStream(target, FileMode.CreateNew, FileAccess.ReadWrite);
         using var document = WordprocessingDocument.Create(file, WordprocessingDocumentType.Document);
         document.PackageProperties.Title = XmlText(snapshot.Title);
@@ -90,6 +92,7 @@ public static class DocumentExports
     public static async Task HtmlAsync(Guide guide, string target, Func<Step, Task<ExportImage>> render)
     {
         var snapshot = GuideJson.Parse(GuideJson.Serialize(guide));
+        GuideJson.EnsurePrivacyApplied(snapshot);
         static string H(string value) => WebUtility.HtmlEncode(value);
         await using var file = new FileStream(target, FileMode.CreateNew, FileAccess.Write);
         await using var output = new StreamWriter(file, new UTF8Encoding(false));
