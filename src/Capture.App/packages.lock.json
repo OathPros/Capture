@@ -18,6 +18,22 @@
         "resolved": "1.0.4314.35",
         "contentHash": "x5MFf2W03xueU1mMNvivXfHSsQ+ODo7vJ36qw/dLtU5Gs+8d7+7N7zzmNNDoT3ffosmcvZNBtUnlzyiDUuBkSQ=="
       },
+      "DocumentFormat.OpenXml": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "zxdOf5VVCe/uNklbRhj8dVBzQGj3DoqkUuqOp9cAZVuN8mNYDjof1lvSQA2OQNr8Ptc9d7pbA7Azq/ReaI3FpA==",
+        "dependencies": {
+          "DocumentFormat.OpenXml.Framework": "3.5.1"
+        }
+      },
+      "DocumentFormat.OpenXml.Framework": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "U5txtc3ORno73xQx9Lf2gWzfaSZnZwKHfLkTAslhlew9lxe5XbUiCt0dY1fHeAf8yRqszUAe5i/+xLC9R/Xfsw==",
+        "dependencies": {
+          "System.IO.Packaging": "10.0.2"
+        }
+      },
       "FlaUI.Core": {
         "type": "Transitive",
         "resolved": "5.0.0",
@@ -31,13 +47,21 @@
         "resolved": "10.19041.0",
         "contentHash": "Me5vKNZ1JSg6txTsPQXaWx7fVNh+fmcUPPwtDKJtqvbMM0N8aoa/l/QPolkJIRnasCabCNt4v2zG4p1Q9HU98A=="
       },
+      "System.IO.Packaging": {
+        "type": "Transitive",
+        "resolved": "10.0.2",
+        "contentHash": "JTpM4z0wpoIHHDvlCU27HsXo+zVnpWib94HXQpzzr+jc/P9NYf4w353AK4MXyGq/grm1mbLi7eXsOsDU8sGmNg=="
+      },
       "System.Management": {
         "type": "Transitive",
         "resolved": "8.0.0",
         "contentHash": "jrK22i5LRzxZCfGb+tGmke2VH7oE0DvcDlJ1HAKYU8cPmD8XnpUT0bYn2Gy98GEhGjtfbR/sxKTVb+dE770pfA=="
       },
       "capture.core": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "[3.5.1, )"
+        }
       }
     },
     "net10.0-windows7.0/win-x64": {

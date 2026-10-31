@@ -2,6 +2,18 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "AngleSharp": {
+        "type": "Direct",
+        "requested": "[1.9.0, )",
+        "resolved": "1.9.0",
+        "contentHash": "NOKbXBsj4gaudXjAmdfSPxgUmKNbxP0k87ZRN56N0FW3u2z8AT7sRnTEOWjKoNrPI1vq4slV7Ld2nBCOvu/v8w=="
+      },
+      "Markdig": {
+        "type": "Direct",
+        "requested": "[1.5.1, )",
+        "resolved": "1.5.1",
+        "contentHash": "NtHwU5t5yKr6Gnylhs8/hlR0mOAftTFQURDz2ID8bkunxps1neOzKw0dYKKlwNuwiYIGLHjJTXK91f809Ko1ww=="
+      },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
         "requested": "[18.11.0, )",
@@ -29,6 +41,22 @@
         "resolved": "4.0.1",
         "contentHash": "8CoAaZkniVekR1ycJyxn+hOz+6ZQCDPcoIsIs6ujd4WyFcBMlxGNU15Qb8Uxd4iO4UmOuETb0M6vzBbwX/mfLA=="
       },
+      "DocumentFormat.OpenXml": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "zxdOf5VVCe/uNklbRhj8dVBzQGj3DoqkUuqOp9cAZVuN8mNYDjof1lvSQA2OQNr8Ptc9d7pbA7Azq/ReaI3FpA==",
+        "dependencies": {
+          "DocumentFormat.OpenXml.Framework": "3.5.1"
+        }
+      },
+      "DocumentFormat.OpenXml.Framework": {
+        "type": "Transitive",
+        "resolved": "3.5.1",
+        "contentHash": "U5txtc3ORno73xQx9Lf2gWzfaSZnZwKHfLkTAslhlew9lxe5XbUiCt0dY1fHeAf8yRqszUAe5i/+xLC9R/Xfsw==",
+        "dependencies": {
+          "System.IO.Packaging": "10.0.2"
+        }
+      },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
         "resolved": "18.11.0",
@@ -46,6 +74,11 @@
         "dependencies": {
           "Microsoft.TestPlatform.ObjectModel": "18.11.0"
         }
+      },
+      "System.IO.Packaging": {
+        "type": "Transitive",
+        "resolved": "10.0.2",
+        "contentHash": "JTpM4z0wpoIHHDvlCU27HsXo+zVnpWib94HXQpzzr+jc/P9NYf4w353AK4MXyGq/grm1mbLi7eXsOsDU8sGmNg=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -88,7 +121,10 @@
         }
       },
       "capture.core": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "DocumentFormat.OpenXml": "[3.5.1, )"
+        }
       }
     }
   }

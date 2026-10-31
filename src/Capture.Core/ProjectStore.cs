@@ -80,7 +80,8 @@ public sealed class ProjectStore(string root)
     public static string Markdown(Guide g)
     {
         static string Escape(string s) => string.Concat(s.Select(c => "\\`*_{}[]<>()#+-.!|".Contains(c) ? "\\" + c : c.ToString()));
-        var b = new StringBuilder().AppendLine("# " + Escape(g.Title)).AppendLine().AppendLine(Escape(g.Summary));
+        GuideJson.Validate(g);
+        var b = new StringBuilder().AppendLine("<!-- CAPTURE Markdown export 1.0; guide schema " + g.SchemaVersion + " -->").AppendLine().AppendLine("# " + Escape(g.Title)).AppendLine().AppendLine(Escape(g.Summary));
         foreach (var (s, i) in g.Steps.Select((s,i)=>(s,i)))
         {
             b.AppendLine().AppendLine($"## {i+1}. {Escape(s.Title)}").AppendLine().AppendLine(Escape(s.Instruction));

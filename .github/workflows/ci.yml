@@ -36,7 +36,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Capture-Windows-x64-preview
-          path: artifacts/Capture-0.1.0-preview.2-win-x64.zip
+          path: |
+            artifacts/Capture-0.2.0-preview.1-win-x64.zip
+            artifacts/Capture-export-examples.zip
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -53,4 +55,4 @@ jobs:
       - name: Publish tested build as a prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" artifacts/*.zip --prerelease --title "CAPTURE 0.1.0 — Windows preview" --notes-file docs/RELEASE-NOTES.md
+        run: gh release create "$GITHUB_REF_NAME" artifacts/*.zip --prerelease --title "CAPTURE 0.2.0 — Word, Markdown and HTML exports" --notes-file docs/RELEASE-NOTES.md

@@ -1,9 +1,12 @@
-# CAPTURE 0.1.0 — Windows preview
+# CAPTURE 0.2.0 — Word, Markdown and HTML exports
 
-Preview 2 also ensures a stalled accessibility provider cannot prevent exiting after a failed cancellation.
+Download `Capture-0.2.0-preview.1-win-x64.zip`, extract it, and run Capture.App.exe. Requires Windows 11 x64 and Microsoft Edge WebView2 Runtime; .NET is bundled.
 
-Download the Windows x64 ZIP, extract all files, and run Capture.App.exe. Requires Windows 11 x64 and Microsoft Edge WebView2 Runtime. .NET is bundled.
+- **Word DOCX:** real Open XML documents with title, introduction, numbered step headings, instructions, notes, accessible embedded screenshots, proportional image sizing, Letter layout and page numbers. Word is not required to export.
+- **Markdown ZIP:** `README.md` plus screenshot assets, escaped user text, complete notes and ordered steps.
+- **HTML guide:** one polished, offline `.html` file with embedded screenshots, contents links, responsive cards and print styling. No external fonts, scripts or images.
+- All three share validated, export-only screenshot rendering with flattened highlight outlines. Original project screenshots remain editable. Missing or changed images produce an error; existing exports are replaced only after the complete new file is written.
 
-Includes explicit click recording, pause/finish/cancel, Ctrl+Shift+R (configurable), process exclusions, pre-action monitor screenshots, UIA labels with safe fallback, draft persistence, projects, editable text and highlights, undo/reorder, Markdown ZIP and portable package import/export.
+`Capture-export-examples.zip` contains synthetic examples of all three formats. These examples are not real captured sessions.
 
-**This is an early, unsigned preview, not a completed V1 release. Interactive Windows capture and mixed-DPI behavior remain unverified. Test only with synthetic data first.** Screenshots may contain sensitive content; password detection and process exclusions are best effort. No redaction, crop, DOCX, PDF, manual screenshot insertion or institutional publishing is included. Portable exports contain original images. Read README.md and docs/MANUAL-TESTS.md before use.
+Recording, local project recovery/editing, and portable package import/export remain available. This is an unsigned preview; interactive Windows capture, timing and mixed-DPI behavior remain unverified. Use synthetic data first. PDF, redaction/crop, manual screenshot insertion and institutional publishing are not included. Inspect screenshots before sharing; exports may contain sensitive information. See README.md and docs/MANUAL-TESTS.md.

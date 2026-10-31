@@ -19,7 +19,7 @@ public partial class MainWindow : Window
     private Guide? current;
     private Window? toolbar;
     private TextBlock? recordingText;
-    private bool exiting, initialized, busy, hotkeyRegistered, recordingBlocked;
+    private bool exiting, initialized, busy, hotkeyRegistered, recordingBlocked, exporting;
     private TaskCompletionSource? flushCompletion;
     private uint hotkey = 0x52;
     private string[] exclusions = ["1password", "keepass", "bitwarden", "lastpass", "credential", "lockapp", "logonui"];
@@ -83,7 +83,7 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.1.0-preview", guide = current, recording = session.State.ToString() },
+                "editor.ready" => new { version = "0.2.0-preview.1", guide = current, recording = session.State.ToString() },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "project.list" => await store.ListAsync(),
@@ -120,7 +120,7 @@ public partial class MainWindow : Window
         hotkeyRegistered = true; hotkey = key[0]; exclusions = list;
         await File.WriteAllTextAsync(settingsFile,JsonSerializer.Serialize(new { hotkey, exclusions })); return new { saved = true };
     }
-    private void RequireIdle() { if (session.State != SessionState.Idle) throw new InvalidOperationException("Finish the recording first."); }
+    private void RequireIdle() { if (exporting) throw new InvalidOperationException("Wait for the current export to finish."); if (session.State != SessionState.Idle) throw new InvalidOperationException("Finish the recording first."); }
     private Guide Select(Guide g)
     {
         current = g;
@@ -145,7 +145,7 @@ public partial class MainWindow : Window
     private async Task<object> ToggleFromBridgeAsync() { await ToggleAsync(); return new { recording = session.State.ToString() }; }
     private async Task ToggleAsync()
     {
-        if (!initialized || busy) return;
+        if (!initialized || busy || exporting) return;
         if(recordingBlocked) { MessageBox.Show("Restart Capture before recording again. Saved drafts are available in Projects."); return; }
         busy = true;
         try
@@ -202,33 +202,37 @@ public partial class MainWindow : Window
     {
         RequireIdle(); if(current is null) throw new InvalidOperationException("Open a guide first.");
         if (MessageBox.Show("Review all screenshots for sensitive information before exporting. This preview has no redaction tool. Export only material you are permitted to share.","Review before export",MessageBoxButton.OKCancel,MessageBoxImage.Warning) != MessageBoxResult.OK) return new { cancelled = true };
-        var extension = format switch { "portable" => ".capture", "markdown" => ".zip", _ => throw new InvalidDataException("Unsupported export format.") };
-        var dialog = new Microsoft.Win32.SaveFileDialog { FileName="guide"+extension, Filter=$"Export|*{extension}", DefaultExt=extension, InitialDirectory=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), OverwritePrompt=true };
+        var extension = format switch { "portable" => ".capture", "markdown" => ".zip", "docx" => ".docx", "html" => ".html", _ => throw new InvalidDataException("Unsupported export format.") };
+        var label = format switch { "docx" => "Word document", "html" => "HTML guide", "markdown" => "Markdown ZIP", _ => "Capture package" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName="guide"+extension, Filter=$"{label}|*{extension}", DefaultExt=extension, InitialDirectory=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), OverwritePrompt=true };
         if(dialog.ShowDialog(this)!=true) return new { cancelled=true };
         // Write the complete archive next to the destination before replacing any existing export.
         var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var snapshot = GuideJson.Parse(GuideJson.Serialize(current));
+        exporting = true;
         try
         {
-            if(format=="portable") await store.ExportPortableAsync(current,temporary);
-            else
+            await Task.Run(async () =>
             {
-                using var zip = ZipFile.Open(temporary,ZipArchiveMode.Create);
-                using(var writer = new StreamWriter(zip.CreateEntry("README.md").Open())) await writer.WriteAsync(ProjectStore.Markdown(current));
-                for(int i=0;i<current.Steps.Count;i++)
+                if (format == "portable") await store.ExportPortableAsync(snapshot, temporary);
+                else
                 {
-                    var step=current.Steps[i]; if(step.AssetId is null) continue;
-                    var asset=current.Assets.Single(a=>a.Id==step.AssetId);
-                    using var bitmap=new Bitmap(GuideJson.SafePath(store.DirectoryFor(current.Id),asset.RelativePath));
-                    using(var graphics=Graphics.FromImage(bitmap)) using(var pen=new Pen(Color.FromArgb(227,24,55),Math.Max(3,bitmap.Width/400f)))
-                        foreach(var a in step.Annotations) graphics.DrawRectangle(pen,(float)(a.X*bitmap.Width),(float)(a.Y*bitmap.Height),(float)(a.Width*bitmap.Width),(float)(a.Height*bitmap.Height));
-                    using var stream=zip.CreateEntry($"assets/step-{i+1:D3}.png").Open(); bitmap.Save(stream,ImageFormat.Png);
+                    Task<ExportImage> Render(Step step) => ExportImageRenderer.RenderAsync(snapshot, step, store.DirectoryFor(snapshot.Id));
+                    if (format == "docx") await DocumentExports.DocxAsync(snapshot, temporary, Render);
+                    else if (format == "html") await DocumentExports.HtmlAsync(snapshot, temporary, Render);
+                    else await DocumentExports.MarkdownAsync(snapshot, temporary, Render);
                 }
-            }
-            File.Move(temporary,dialog.FileName,true);
+            });
+            File.Move(temporary, dialog.FileName, true);
             return new { exported = true };
         }
-        finally { if(File.Exists(temporary)) File.Delete(temporary); }
+        finally
+        {
+            exporting = false;
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
+
     private object CompleteFlush(JsonElement payload)
     {
         if(payload.GetProperty("saved").GetBoolean()) flushCompletion?.TrySetResult();
@@ -245,7 +249,7 @@ public partial class MainWindow : Window
     }
     private async Task ExitAsync()
     {
-        if(busy) return;
+        if(busy || exporting) return;
         if(session.State is SessionState.Recording or SessionState.Paused) { await ToggleAsync(); if(session.State != SessionState.Idle) return; }
         if (MessageBox.Show("Exit Capture? Any editor changes still being saved should finish before you exit.","Exit",MessageBoxButton.OKCancel)!=MessageBoxResult.OK) return;
         try { await FlushEditorAsync(); } catch { MessageBox.Show("Editor changes could not be saved. Capture will remain open. Retry Save before exiting.","Unsaved changes"); return; }

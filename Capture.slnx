@@ -1,1 +1,1 @@
-<Solution><Project Path="src/Capture.Core/Capture.Core.csproj"/><Project Path="src/Capture.App/Capture.App.csproj"/><Project Path="tests/Capture.Core.Tests/Capture.Core.Tests.csproj"/></Solution>
+<Solution><Project Path="src/Capture.Core/Capture.Core.csproj"/><Project Path="src/Capture.App/Capture.App.csproj"/><Project Path="tests/Capture.Core.Tests/Capture.Core.Tests.csproj"/><Project Path="tests/Capture.Windows.Tests/Capture.Windows.Tests.csproj"/></Solution>

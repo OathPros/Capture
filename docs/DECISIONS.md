@@ -24,3 +24,10 @@
 - Choice: Plain text fields and native numeric annotation controls; React 19/TypeScript/Vite. No raw HTML or remote content. Bounded session undo history, serialized/debounced saves, and host-requested save flush before recording/exit.
 - Why: Avoid unnecessary rich-text/canvas dependencies for the first working slice. TipTap/Konva can follow the Windows acceptance gate.
 - Limitations: No crop, rich text, redaction or full print renderer yet. Undo is current-session only.
+
+## ADR-006 — Explicitly requested document exports
+- Date: 2026-10-31
+- Choice: Implement DOCX and improve Markdown at the user's request, then add their requested styled HTML format before full interactive capture acceptance. This is an explicit scope update; it does not mark capture gates complete.
+- Design: Open XML SDK for genuine DOCX; one shared, checksummed Windows PNG annotation renderer for DOCX/MD/HTML. Format projections stay in the cross-platform core and accept a renderer callback, processing one step at a time. The native host snapshots the guide, runs export off the UI thread and atomically replaces a user-selected destination after success.
+- HTML: One offline file with encoded plain text, base64 PNGs, no external dependencies, contents links, responsive/print styles and CSP. No scripts or dynamic document content.
+- Validation: OpenXmlValidator, Markdown/HTML parsers, portrait/landscape/12-step fixtures, text-only/missing-image tests, browser command and offline layout checks, actual Windows GDI pixel/immutability tests in CI. LibreOffice rendering provides additional document compatibility evidence; interactive Word and native dialogs remain manual checks.
