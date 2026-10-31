@@ -12,7 +12,7 @@ M1 — first Windows capture-to-editor preview. Interactive acceptance is **UNVE
 
 ## Verified in this Linux task
 - SDK 10.0.403 installed; real solution cross-build: **0 warnings, 0 errors**.
-- Core .NET tests: **18 passed, 0 failed, 0 skipped** (schema, session transitions, negative coordinates, atomic replacement/reopen, package roundtrip, malicious paths/images, Markdown escaping).
+- Core .NET tests: **19 passed, 0 failed, 0 skipped** (schema, session transitions, negative coordinates, atomic replacement/reopen, package roundtrip, malicious paths/images, Markdown escaping).
 - TypeScript check and Vite production bundle: passed.
 - Vitest: **2 passed** (reorder identity/order and bounds).
 - Playwright with system Chromium: **2 passed** (mocked host create/edit/save/reorder/undo/export/reopen; browser without native host).

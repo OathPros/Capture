@@ -35,7 +35,9 @@ public sealed class ProjectStore(string root)
     }
     public async Task ExportPortableAsync(Guide g, string target)
     {
-        GuideJson.Validate(g);
+        g = GuideJson.Parse(GuideJson.Serialize(g));
+        var referenced = g.Steps.Where(s=>s.AssetId is not null).Select(s=>s.AssetId).ToHashSet();
+        g.Assets = g.Assets.Where(a=>referenced.Contains(a.Id)).ToList();
         using var file = new FileStream(target, FileMode.CreateNew);
         using var zip = new ZipArchive(file, ZipArchiveMode.Create);
         var entry = zip.CreateEntry("guide.json");
@@ -82,6 +84,7 @@ public sealed class ProjectStore(string root)
         foreach (var (s, i) in g.Steps.Select((s,i)=>(s,i)))
         {
             b.AppendLine().AppendLine($"## {i+1}. {Escape(s.Title)}").AppendLine().AppendLine(Escape(s.Instruction));
+            if (!string.IsNullOrWhiteSpace(s.Notes)) b.AppendLine().AppendLine(Escape(s.Notes));
             if (s.AssetId is not null) b.AppendLine().AppendLine($"![Step {i+1} screenshot](assets/step-{i+1:D3}.png)");
         }
         return b.ToString();

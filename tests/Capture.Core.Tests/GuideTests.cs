@@ -68,6 +68,13 @@ public sealed class GuideTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(()=>new ProjectStore(root).ImportPortableAsync(source));
         Assert.Empty(Directory.EnumerateDirectories(root));
     }
+    [Fact] public async Task PortableExportOmitsAssetsFromDeletedSteps()
+    {
+        var store=new ProjectStore(root);var g=new Guide { Assets=[new("unused","assets/unused.png","image/png",1,1,new string('0',64))] };
+        await store.SaveAsync(g);var file=Path.Combine(root,"clean.capture");await store.ExportPortableAsync(g,file);
+        using var zip=ZipFile.OpenRead(file);Assert.Single(zip.Entries);
+        using var reader=new StreamReader(zip.GetEntry("guide.json")!.Open());var exported=GuideJson.Parse(await reader.ReadToEndAsync());Assert.Empty(exported.Assets);Assert.Single(g.Assets);
+    }
     [Fact] public void PngHeaderDimensionsMustMatchMetadata()
     {
         var bytes=Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=");
