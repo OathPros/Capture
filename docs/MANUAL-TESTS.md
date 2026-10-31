@@ -20,3 +20,9 @@ PDF, manual screenshots and hosted integrations are not implemented; do not mark
 3. Export DOCX/MD/HTML; verify styles, text and cropped screenshots. Crop is not redaction and portable source images can be uncropped.
 4. With synthetic sensitive patterns only, add blur/redaction; verify export is blocked until permanent apply. Confirm shared steps update, Undo clears and the old managed image is removed. Verify portable packages contain only sanitized referenced assets. Simulate failed saves/cleanup and retry. Existing external backups are not erased.
 5. Windows CI separately runs synthetic GDI pixel tests and a packaged-WebView2 PNG decoding smoke test. Those do not prove real desktop capture timing or privacy behavior.
+
+## Version 4 quality-of-life checks
+1. Make a new recording with named buttons, tabs and labeled fields. Confirm title prose is sentence case, only field/control labels are bold, instruction details do not repeat the title, and typed values never appear. Test a custom/unnamed control and verify the honest review fallback.
+2. Check that the fitted highlight encloses the actual control, including clicking a text child inside a button. Test pre-click navigation, negative-origin monitors and mixed DPI. Old recorded highlights remain editable but cannot be automatically re-detected from their PNGs.
+3. Remove a browser tab/tool strip with horizontal Cut strip, then an interior gap and a vertical strip. Verify the gap closes, annotations can still be moved/resized, undo/reset/reopen works, and DOCX/MD/HTML/clipboard pictures match. Crop/cut are not redaction.
+4. Copy HTML code into a text editor and open the pasted complete document offline. Copy steps for Word directly into Word using Keep Source Formatting: confirm headings, bold field runs, notes, image order/size and Unicode. Keep Text Only is expected to omit images. Verify no export save dialog/file is needed. Try a busy clipboard and verify edits remain intact.

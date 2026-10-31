@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Capture.Core;
 public sealed class Guide
 {
-    public string SchemaVersion { get; set; } = "1.1.0";
+    public string SchemaVersion { get; set; } = "1.2.0";
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Title { get; set; } = "Untitled guide";
     public string Summary { get; set; } = "";
@@ -19,12 +19,14 @@ public sealed class Step
     public Guid Id { get; set; } = Guid.NewGuid();
     public int Order { get; set; }
     public string Title { get; set; } = "Select the highlighted area";
-    public string Instruction { get; set; } = "Select the highlighted area.";
+    public string Instruction { get; set; } = "";
+    public List<string> TitleFields { get; set; } = [];
     public string Notes { get; set; } = "";
     public string? AssetId { get; set; }
     public List<Annotation> Annotations { get; set; } = [];
     public bool NeedsReview { get; set; } = true;
     public CropRegion? Crop { get; set; }
+    public List<ImageCut> Cuts { get; set; } = [];
 }
 public sealed record CropRegion(double X, double Y, double Width, double Height);
 public sealed record Annotation(string Id, string Kind, double X, double Y, double Width, double Height)
@@ -44,11 +46,11 @@ public sealed record Asset(string Id, string RelativePath, string MimeType, int 
 public static class GuideJson
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
-    public static string Serialize(Guide guide) { Validate(guide); guide.SchemaVersion = "1.1.0"; return JsonSerializer.Serialize(guide, Options); }
+    public static string Serialize(Guide guide) { Validate(guide); guide.SchemaVersion = "1.2.0"; return JsonSerializer.Serialize(guide, Options); }
     public static Guide Parse(string json) { var g = JsonSerializer.Deserialize<Guide>(json, Options) ?? throw new InvalidDataException("Empty guide."); Validate(g); return g; }
     public static void Validate(Guide g)
     {
-        if (g.SchemaVersion is not ("1.0.0" or "1.1.0")) throw new InvalidDataException("Unsupported guide schema. Use a compatible Capture version.");
+        if (g.SchemaVersion is not ("1.0.0" or "1.1.0" or "1.2.0")) throw new InvalidDataException("Unsupported guide schema. Use a compatible Capture version.");
         if (g.Id == Guid.Empty || g.Title is null || g.Title.Length > 1000 || g.Summary is null || g.Summary.Length > 100000 || g.Steps is null || g.Assets is null || g.Steps.Count > 10000 || g.Assets.Count > 10000 || g.PendingAssetDeletes is null || g.PendingAssetDeletes.Count > 10000) throw new InvalidDataException("Invalid guide.");
         if (g.Steps.Select(s => s.Id).Distinct().Count() != g.Steps.Count || g.Assets.Select(a => a.Id).Distinct().Count() != g.Assets.Count || g.Assets.Select(a => a.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != g.Assets.Count) throw new InvalidDataException("Duplicate IDs.");
         foreach (var a in g.Assets)
@@ -64,7 +66,7 @@ public static class GuideJson
         for (int i = 0; i < g.Steps.Count; i++)
         {
             var s = g.Steps[i];
-            if (s.Id == Guid.Empty || s.Title is null || s.Instruction is null || s.Notes is null || s.Title.Length > 1000 || s.Instruction.Length > 100000 || s.Notes.Length > 100000 || s.Annotations is null || s.Annotations.Count > 1000) throw new InvalidDataException("Invalid step.");
+            if (s.Id == Guid.Empty || s.Title is null || s.Instruction is null || s.Notes is null || s.Title.Length > 1000 || s.Instruction.Length > 100000 || s.Notes.Length > 100000 || s.Annotations is null || s.Annotations.Count > 1000 || s.TitleFields is null || s.TitleFields.Count>32 || s.TitleFields.Any(f=>string.IsNullOrWhiteSpace(f)||f.Length>120) || s.Cuts is null || s.Cuts.Count>32) throw new InvalidDataException("Invalid step.");
             if (s.AssetId is not null && !g.Assets.Any(a => a.Id == s.AssetId)) throw new InvalidDataException("Missing image reference.");
             if(s.Crop is not null && !ValidRegion(s.Crop.X,s.Crop.Y,s.Crop.Width,s.Crop.Height)) throw new InvalidDataException("Invalid crop.");
             if(s.Annotations.Select(a=>a.Id).Distinct().Count()!=s.Annotations.Count) throw new InvalidDataException("Duplicate annotation IDs.");
@@ -73,6 +75,16 @@ public static class GuideJson
                 if (a.Kind is not ("highlight" or "rectangle" or "ellipse" or "line" or "arrow" or "text" or "callout" or "blur" or "redact") || !ValidRegion(a.X,a.Y,a.Width,a.Height)) throw new InvalidDataException("Invalid annotation.");
                 if(string.IsNullOrWhiteSpace(a.Id) || a.Id.Length>100 || !Color(a.Stroke) || !Color(a.TextColor) || (a.Fill!="transparent" && !Color(a.Fill)) || !double.IsFinite(a.StrokeWidth) || a.StrokeWidth<1 || a.StrokeWidth>40 || !double.IsFinite(a.FontSize) || a.FontSize<8 || a.FontSize>256 || a.Text is null || a.Text.Length>4000 || a.BlurRadius<2 || a.BlurRadius>64) throw new InvalidDataException("Invalid annotation properties.");
             }
+            foreach(var cut in s.Cuts)
+                if(cut.Axis is not ("horizontal" or "vertical") || !double.IsFinite(cut.Start+cut.End) || cut.Start<0 || cut.End>1 || cut.Start>=cut.End)throw new InvalidDataException("Invalid cut strip.");
+            if(s.Cuts.Count>0)
+            {
+                var image=g.Assets.SingleOrDefault(a=>a.Id==s.AssetId)??throw new InvalidDataException("Cut requires a screenshot.");
+                var layout=ImageLayout.Create(image.Width,image.Height,s.Crop,s.Cuts);
+                if(layout.Width<1||layout.Height<1)throw new InvalidDataException("A cut must leave some of the screenshot.");
+            }
+            if(StepText.IsDuplicate(s.Title,s.Instruction))
+            {if(g.SchemaVersion is "1.0.0" or "1.1.0" && s.TitleFields.Count==0)s.TitleFields=StepText.LegacyFields(s.Title);s.Instruction="";}
             s.Order = i + 1;
         }
     }

@@ -23,5 +23,6 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr hwnd,out uint process);
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] [return:MarshalAs(UnmanagedType.Bool)] internal static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] [return:MarshalAs(UnmanagedType.Bool)] internal static extern bool SetWindowDisplayAffinity(IntPtr hwnd,uint affinity);
 }

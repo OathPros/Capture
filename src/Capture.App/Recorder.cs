@@ -15,7 +15,8 @@ internal sealed class Recorder : IDisposable
     private readonly object frameLock = new();
     private readonly Queue<Frame> frames = new();
     private readonly Native.HookProc callback;
-    private Thread? hookThread, worker, sampler;
+    private Thread? hookThread, worker, sampler, hoverWorker;
+    private TargetSnapshot? hoverTarget;
     private uint threadId;
     private IntPtr hook;
     private volatile bool running, paused;
@@ -42,6 +43,7 @@ internal sealed class Recorder : IDisposable
         if (failure is not null) { running = false; throw failure; }
         worker = new Thread(ProcessClicks) { IsBackground = true, Name = "Capture UIA MTA" };
         worker.SetApartmentState(ApartmentState.MTA); worker.Start();
+        hoverWorker=new Thread(SampleTarget){IsBackground=true,Name="Capture pre-click UIA MTA"};hoverWorker.SetApartmentState(ApartmentState.MTA);hoverWorker.Start();
         sampler = new Thread(Sample) { IsBackground = true, Name = "Capture pre-action frames" }; sampler.Start();
     }
     public void Pause(bool value) { paused = value; lock(frameLock) frames.Clear(); }
@@ -90,6 +92,20 @@ internal sealed class Recorder : IDisposable
             Thread.Sleep(150);
         }
     }
+    private void SampleTarget()
+    {
+        try
+        {
+            using var automation=new UIA3Automation();
+            while(running)
+            {
+                if(!paused && Native.GetCursorPos(out var p) && IsAllowed(Native.WindowFromPoint(p)))Volatile.Write(ref hoverTarget,TargetResolver.Resolve(automation,p.X,p.Y));
+                else Volatile.Write(ref hoverTarget,null);
+                Thread.Sleep(100);
+            }
+        }
+        catch { Volatile.Write(ref hoverTarget,null); }
+    }
     private void ProcessClicks()
     {
         UIA3Automation? automation = null;
@@ -105,28 +121,17 @@ internal sealed class Recorder : IDisposable
                     Frame? frame;
                     lock(frameLock) frame = frames.LastOrDefault(f => f.Timestamp <= click.Timestamp && f.Bounds.Contains(click.X,click.Y));
                     if (frame is null || Stopwatch.GetElapsedTime(frame.Timestamp,click.Timestamp).TotalMilliseconds > 1000) { Status?.Invoke("A click had no recent pre-action screenshot and was skipped. Add a manual text step if needed."); continue; }
-                    var step = new Step();
-                    // UIA has no reliable cross-provider cancellation. This dedicated worker never blocks the hook or UI.
-                    try
-                    {
-                        var element = (automation ?? throw new InvalidOperationException()).FromPoint(new Point(click.X,click.Y));
-                        if (element.Properties.IsPassword.ValueOrDefault) { Status?.Invoke("Password control suppressed. Review nearby screenshots for sensitive information."); continue; }
-                        var type = element.ControlType.ToString();
-                        // Editable controls' Name can contain user content; do not persist it.
-                        var name = type == "Edit" ? "" : element.Name;
-                        if (!string.IsNullOrWhiteSpace(name) && name.Length <= 120)
-                        {
-                            step.Title = type switch { "TabItem" => $"Open the {name} tab", "MenuItem" => $"Choose {name}", "Hyperlink" => $"Open {name}", "CheckBox" => $"Change the {name} option", _ => $"Select {name}" };
-                            step.Instruction = step.Title + ".";
-                        }
-                        else if(type == "Edit") { step.Title = "Enter the required information"; step.Instruction = "Enter the required information in the selected field."; }
-                    }
-                    catch { /* Safe click-marker fallback. */ }
+                    var target=Volatile.Read(ref hoverTarget);
+                    if(!TargetResolver.Matches(target,click.X,click.Y,click.Timestamp))target=automation is null?null:TargetResolver.Resolve(automation,click.X,click.Y);
+                    if(target?.Password==true){Status?.Invoke("Password control suppressed. Review nearby screenshots for sensitive information.");continue;}
+                    var step=StepText.FromControl(target?.Type??"Unknown",target?.Label);
+                    var highlight=CaptureTargets.Highlight(click.X,click.Y,target?.Bounds,new(frame.Bounds.Left,frame.Bounds.Top,frame.Bounds.Width,frame.Bounds.Height));
+                    if(Guide.Steps.All(s=>s.TitleFields.Count==0) && step.TitleFields.Count>0)Guide.Title=step.TitleFields[0]+" workflow";
                     var id = Guid.NewGuid().ToString(); var relative = $"assets/{id}.png";
                     var path = GuideJson.SafePath(store.DirectoryFor(Guide.Id),relative); Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllBytes(path,frame.Png);
                     Guide.Assets.Add(new(id,relative,"image/png",frame.Bounds.Width,frame.Bounds.Height,Convert.ToHexString(SHA256.HashData(frame.Png))));
                     step.AssetId = id; step.Order = Guide.Steps.Count+1;
-                    step.Annotations.Add(Coordinates.Marker(click.X,click.Y,frame.Bounds.Left,frame.Bounds.Top,frame.Bounds.Width,frame.Bounds.Height));
+                    step.Annotations.Add(highlight);
                     // All UIA labels/timing are provisional until reviewed by a person.
                     Guide.Steps.Add(step); store.SaveAsync(Guide).GetAwaiter().GetResult();
                     Status?.Invoke($"Recording · {Guide.Steps.Count} steps" + (Volatile.Read(ref dropped) > 0 ? " · Some clicks were dropped; review the guide." : ""));
@@ -140,7 +145,7 @@ internal sealed class Recorder : IDisposable
         running = false; Native.PostThreadMessage(threadId,0x12,UIntPtr.Zero,IntPtr.Zero);
         clicks.Writer.TryComplete();
         // Do not silently open an incomplete guide if an external UIA provider hangs.
-        await Task.Run(() => { sampler?.Join(); hookThread?.Join(); if (worker is not null && !worker.Join(TimeSpan.FromSeconds(10))) throw new TimeoutException("An application accessibility provider is not responding. Saved steps remain in Projects. Close Capture and restart it before recording again."); });
+        await Task.Run(() => { sampler?.Join(); hookThread?.Join(); if(hoverWorker is not null && !hoverWorker.Join(TimeSpan.FromSeconds(2)))throw new TimeoutException("An accessibility provider is not responding. Saved steps remain in Projects. Restart Capture before recording again."); if (worker is not null && !worker.Join(TimeSpan.FromSeconds(10))) throw new TimeoutException("An application accessibility provider is not responding. Saved steps remain in Projects. Close Capture and restart it before recording again."); });
         lock(frameLock) frames.Clear();
         await store.SaveAsync(Guide);
     }

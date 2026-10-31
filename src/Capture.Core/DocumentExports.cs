@@ -53,10 +53,13 @@ public static class DocumentExports
         for (int i = 0; i < snapshot.Steps.Count; i++)
         {
             var step = snapshot.Steps[i];
-            body.Append(Paragraph($"{i+1}. {step.Title}", "Heading1"));
-            var instruction = Paragraph(step.Instruction);
-            if (step.AssetId is not null) instruction.PrependChild(new W.ParagraphProperties(new W.KeepNext()));
-            body.Append(instruction);
+            body.Append(Paragraph($"{i+1}. {step.Title}", "Heading1", step.TitleFields));
+            if(!string.IsNullOrWhiteSpace(step.Instruction))
+            {
+                var instruction = Paragraph(step.Instruction,fields:step.TitleFields);
+                if (step.AssetId is not null) instruction.PrependChild(new W.ParagraphProperties(new W.KeepNext()));
+                body.Append(instruction);
+            }
             if (!string.IsNullOrWhiteSpace(step.Notes))
             {
                 var notes = Paragraph(step.Notes);
@@ -89,13 +92,21 @@ public static class DocumentExports
     }
 
 
-    public static async Task HtmlAsync(Guide guide, string target, Func<Step, Task<ExportImage>> render)
+    public static async Task HtmlAsync(Guide guide,string target,Func<Step,Task<ExportImage>> render)
     {
-        var snapshot = GuideJson.Parse(GuideJson.Serialize(guide));
-        GuideJson.EnsurePrivacyApplied(snapshot);
-        static string H(string value) => WebUtility.HtmlEncode(value);
-        await using var file = new FileStream(target, FileMode.CreateNew, FileAccess.Write);
-        await using var output = new StreamWriter(file, new UTF8Encoding(false));
+        var snapshot=GuideJson.Parse(GuideJson.Serialize(guide));GuideJson.EnsurePrivacyApplied(snapshot);
+        await using var file=new FileStream(target,FileMode.CreateNew,FileAccess.Write);
+        await using var output=new StreamWriter(file,new UTF8Encoding(false));
+        await WriteHtmlAsync(snapshot,output,render);
+    }
+    public static async Task<string> HtmlCodeAsync(Guide guide,Func<Step,Task<ExportImage>> render)
+    {
+        var snapshot=GuideJson.Parse(GuideJson.Serialize(guide));GuideJson.EnsurePrivacyApplied(snapshot);
+        using var output=new StringWriter();await WriteHtmlAsync(snapshot,output,render);return output.ToString();
+    }
+    private static async Task WriteHtmlAsync(Guide snapshot,TextWriter output,Func<Step,Task<ExportImage>> render)
+    {
+        static string H(string value)=>WebUtility.HtmlEncode(value);
         await output.WriteAsync("<!doctype html><html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
         await output.WriteAsync("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\"><meta name=\"generator\" content=\"CAPTURE HTML export 1.0\">");
         await output.WriteAsync($"<title>{H(snapshot.Title)}</title><style>{HtmlStyles}</style></head><body id=\"top\"><main>");
@@ -106,14 +117,14 @@ public static class DocumentExports
         {
             await output.WriteAsync("<nav class=\"contents\" aria-label=\"Guide contents\"><h2>In this guide</h2><ol>");
             for (int i = 0; i < snapshot.Steps.Count; i++)
-                await output.WriteAsync($"<li><a href=\"#step-{i+1}\">{H(snapshot.Steps[i].Title)}</a></li>");
+                await output.WriteAsync($"<li><a href=\"#step-{i+1}\">{StepText.Html(snapshot.Steps[i].Title,snapshot.Steps[i].TitleFields)}</a></li>");
             await output.WriteAsync("</ol></nav>");
         }
         for (int i = 0; i < snapshot.Steps.Count; i++)
         {
             var step = snapshot.Steps[i];
-            await output.WriteAsync($"<article class=\"step\" id=\"step-{i+1}\"><div class=\"step-heading\"><span class=\"number\" aria-hidden=\"true\">{i+1:D2}</span><h2><span class=\"sr-only\">Step {i+1}: </span>{H(step.Title)}</h2></div>");
-            await output.WriteAsync($"<p class=\"instruction\">{H(step.Instruction)}</p>");
+            await output.WriteAsync($"<article class=\"step\" id=\"step-{i+1}\"><div class=\"step-heading\"><span class=\"number\" aria-hidden=\"true\">{i+1:D2}</span><h2><span class=\"sr-only\">Step {i+1}: </span>{StepText.Html(step.Title,step.TitleFields)}</h2></div>");
+            if(!string.IsNullOrWhiteSpace(step.Instruction))await output.WriteAsync($"<p class=\"instruction\">{StepText.Html(step.Instruction,step.TitleFields)}</p>");
             if (!string.IsNullOrWhiteSpace(step.Notes)) await output.WriteAsync($"<aside class=\"notes\"><strong>Note</strong><p>{H(step.Notes)}</p></aside>");
             if (step.AssetId is not null)
             {
@@ -138,7 +149,7 @@ public static class DocumentExports
         .contents li{padding:3px 0;break-inside:avoid}.contents a{overflow-wrap:anywhere;color:var(--muted);text-decoration:none}.contents a:hover{color:var(--accent);text-decoration:underline}
         .step{margin:24px 0;padding:32px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 12px #20283305;overflow-wrap:anywhere}
         .step-heading{display:flex;gap:18px;align-items:flex-start;margin-bottom:18px}.number{color:var(--accent);background:#f9e9ed;border:1px solid #edcdd5;border-radius:9px;padding:5px 10px;font-weight:750;font-size:17px;font-variant-numeric:tabular-nums}
-        h2{font-size:24px;line-height:1.35;margin:3px 0 0;letter-spacing:-.4px}.instruction{margin:0 0 22px;white-space:pre-wrap}
+        .step h2{font-weight:500}.step h2 strong{font-weight:750}h2{font-size:24px;line-height:1.35;margin:3px 0 0;letter-spacing:-.4px}.instruction{margin:0 0 22px;white-space:pre-wrap}
         .notes{border-left:3px solid #b9c8d9;padding:12px 18px;margin:18px 0 24px;background:#f5f7fa;font-size:14px}.notes strong{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px}.notes p{margin:4px 0 0;white-space:pre-wrap}
         figure{margin:24px 0 0}img{display:block;max-width:100%;width:auto;height:auto;border:1px solid var(--line);border-radius:6px}figcaption{font-size:12px;color:var(--muted);margin-top:10px}
         a{color:var(--accent)}a:focus-visible{outline:3px solid #2366c2;outline-offset:4px}footer{display:flex;justify-content:space-between;gap:20px;padding:28px 0;font-size:12px;color:var(--muted)}
@@ -160,7 +171,7 @@ public static class DocumentExports
         return result.ToString();
     }
 
-    private static W.Paragraph Paragraph(string text, string? style = null)
+    private static W.Paragraph Paragraph(string text, string? style = null,IEnumerable<string>? fields=null)
     {
         var paragraph = new W.Paragraph();
         if (style is not null) paragraph.Append(new W.ParagraphProperties(new W.ParagraphStyleId { Val = style }));
@@ -168,7 +179,11 @@ public static class DocumentExports
         for (int i = 0; i < lines.Length; i++)
         {
             if (i > 0) paragraph.Append(new W.Run(new W.Break()));
-            paragraph.Append(new W.Run(new W.Text(lines[i]) { Space = SpaceProcessingModeValues.Preserve }));
+            foreach(var part in StepText.Runs(lines[i],fields))
+            {
+                var run=new W.Run();if(part.Bold)run.Append(new W.RunProperties(new W.Bold()));
+                run.Append(new W.Text(part.Text){Space=SpaceProcessingModeValues.Preserve});paragraph.Append(run);
+            }
         }
         return paragraph;
     }
@@ -187,7 +202,7 @@ public static class DocumentExports
                 new W.StyleParagraphProperties(new W.KeepNext()), new W.StyleRunProperties(new W.Bold(), new W.FontSize { Val = "40" })) { Type = W.StyleValues.Paragraph, StyleId = "Title" },
             new W.Style(new W.StyleName { Val = "heading 1" }, new W.BasedOn { Val = "Normal" },
                 new W.StyleParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { Before = "240", After = "120" }, new W.OutlineLevel { Val = 0 }),
-                new W.StyleRunProperties(new W.Bold(), new W.FontSize { Val = "28" })) { Type = W.StyleValues.Paragraph, StyleId = "Heading1" });
+                new W.StyleRunProperties(new W.FontSize { Val = "28" })) { Type = W.StyleValues.Paragraph, StyleId = "Heading1" });
         part.Styles.Save();
     }
 

@@ -84,7 +84,7 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.3.0-preview.1", guide = current, recording = session.State.ToString() },
+                "editor.ready" => new { version = "0.4.0-preview.1", guide = current, recording = session.State.ToString() },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "project.list" => await store.ListAsync(),
@@ -98,6 +98,7 @@ public partial class MainWindow : Window
                 "project.import" => await ImportAsync(),
                 "recording.toggle" => await ToggleFromBridgeAsync(),
                 "export.request" => await ExportAsync(p.GetProperty("format").GetString()!),
+                "clipboard.copy" => await CopyAsync(p.GetProperty("format").GetString()!),
                 _ => throw new InvalidDataException("Unknown command.")
             };
             Editor.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { requestId, ok = true, result },GuideJson.Options));
@@ -240,6 +241,20 @@ public partial class MainWindow : Window
         toolbar.SourceInitialized += (_,_) => { recorder!.MaskWindow = new WindowInteropHelper(toolbar).Handle; if(!Native.SetWindowDisplayAffinity(new WindowInteropHelper(toolbar).Handle,0x11)) recordingText.Text="Toolbar exclusion unavailable; its rectangle will be masked in screenshots."; };
         toolbar.Closing += (_,e) => { if(session.State is SessionState.Recording or SessionState.Paused) e.Cancel=true; };
         toolbar.Show();
+    }
+    private async Task<object> CopyAsync(string format)
+    {
+        RequireIdle();if(current is null)throw new InvalidOperationException("Open a guide first.");GuideJson.EnsurePrivacyApplied(current);
+        if(format is not ("html" or "word"))throw new InvalidDataException("Unknown clipboard format.");
+        var snapshot=GuideJson.Parse(GuideJson.Serialize(current));exporting=true;
+        try
+        {
+            Task<ExportImage> Render(Step step)=>ExportImageRenderer.RenderAsync(snapshot,step,store.DirectoryFor(snapshot.Id));
+            if(format=="html")ClipboardWriter.HtmlCode(await Task.Run(()=>DocumentExports.HtmlCodeAsync(snapshot,Render)));
+            else ClipboardWriter.WordSteps(await Task.Run(()=>WordClipboard.CreateAsync(snapshot,Render)));
+            return new {copied=true};
+        }
+        finally {exporting=false;}
     }
     private async Task<object> ExportAsync(string format)
     {

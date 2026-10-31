@@ -50,7 +50,7 @@ jobs:
         with:
           name: Capture-Windows-x64-preview
           path: |
-            artifacts/Capture-0.3.0-preview.1-win-x64.zip
+            artifacts/Capture-0.4.0-preview.1-win-x64.zip
             artifacts/Capture-export-examples.zip
           if-no-files-found: error
   release:
@@ -68,4 +68,4 @@ jobs:
       - name: Publish tested build as a prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" artifacts/*.zip --prerelease --title "CAPTURE 0.3.0 — Screenshot editor" --notes-file docs/RELEASE-NOTES.md
+        run: gh release create "$GITHUB_REF_NAME" artifacts/*.zip --prerelease --title "CAPTURE 0.4.0 — Capture quality and clipboard" --notes-file docs/RELEASE-NOTES.md

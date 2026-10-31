@@ -27,7 +27,7 @@ public sealed class ImageEditingTests
         {
             await File.WriteAllTextAsync(Path.Combine(dir,"guide.json"),json);var store=new ProjectStore(root);var g=await store.LoadAsync(id);await store.SaveAsync(g);
             Assert.Equal(json,await File.ReadAllTextAsync(Path.Combine(dir,"guide.v1.0.backup.json")));
-            Assert.Equal("1.1.0",(await store.LoadAsync(id)).SchemaVersion);
+            Assert.Equal("1.2.0",(await store.LoadAsync(id)).SchemaVersion);
         }
         finally {Directory.Delete(root,true);}
     }

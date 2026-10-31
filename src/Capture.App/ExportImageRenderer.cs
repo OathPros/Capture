@@ -33,17 +33,22 @@ public static class ExportImageRenderer
         var source = await ReadSourceAsync(guide, step.AssetId!, projectDirectory);
         using var bitmap = Decode(source);
         ApplyPixels(bitmap, step.Annotations);
-        using (var graphics = Graphics.FromImage(bitmap))
+        var layout=Capture.Core.ImageLayout.Create(bitmap.Width,bitmap.Height,step.Crop,step.Cuts);
+        using var result=new Bitmap(layout.Width,layout.Height,PixelFormat.Format32bppArgb);
+        using(var graphics=Graphics.FromImage(result))
+            foreach(var tile in layout.Tiles)
+            {using var piece=bitmap.Clone(new Rectangle(tile.SourceX,tile.SourceY,tile.Width,tile.Height),PixelFormat.Format32bppArgb);graphics.DrawImageUnscaled(piece,tile.X,tile.Y);}
+        using(var graphics=Graphics.FromImage(result))
         {
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            foreach (var annotation in step.Annotations.Where(a => a.Kind is not ("blur" or "redact"))) Draw(graphics, annotation, bitmap.Width, bitmap.Height);
+            graphics.SmoothingMode=SmoothingMode.AntiAlias;
+            foreach(var a in step.Annotations.Where(a=>a.Kind is not ("blur" or "redact")))
+            {
+                var box=layout.Project(new(a.X*bitmap.Width,a.Y*bitmap.Height,a.Width*bitmap.Width,a.Height*bitmap.Height));
+                if(box.Width<=0||box.Height<=0)continue;
+                Draw(graphics,a with {X=box.X/layout.Width,Y=box.Y/layout.Height,Width=box.Width/layout.Width,Height=box.Height/layout.Height},layout.Width,layout.Height);
+            }
         }
-        if (step.Crop is not null)
-        {
-            using var cropped = bitmap.Clone(Bounds(step.Crop.X, step.Crop.Y, step.Crop.Width, step.Crop.Height, bitmap.Width, bitmap.Height), PixelFormat.Format32bppArgb);
-            return Encode(cropped);
-        }
-        return Encode(bitmap);
+        return Encode(result);
     }
 
     public static async Task<ExportImage> PixelEditsAsync(Guide guide, string assetId, string projectDirectory)

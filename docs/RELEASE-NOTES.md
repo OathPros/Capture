@@ -1,14 +1,12 @@
-# CAPTURE 0.3.0 — Screenshot editor
+# CAPTURE 0.4.0 — Capture quality and clipboard
 
-Download `Capture-0.3.0-preview.1-win-x64.zip`, extract the entire ZIP, and run Capture.App.exe. Exit older Capture instances from the tray first. Windows 11 x64 and WebView2 Runtime are required; .NET is bundled.
+Download `Capture-0.4.0-preview.1-win-x64.zip`, extract the full ZIP, exit the older app from its tray icon, and run Capture.App.exe. Requires Windows 11 x64 and WebView2 Runtime; .NET is bundled. This is still a portable, unsigned preview.
 
-- Fixes broken screenshot display by reading known project PNGs through the native host, with checksum/dimension checks, a visible missing-image error and Retry.
-- Screenshot-first canvas: Select, Crop, Blur, Redact, Text, Line, Arrow, Callout, Rectangle, Ellipse and Highlight. Drag to draw; move and resize selected objects with handles. Cut/copy/paste/delete, zoom, undo/redo and exact geometry controls.
-- Editable fill and outline colours, outline width, text colour/font size and shadows. Crop/reset is reversible. DOCX, Markdown and HTML export the edited shapes, text and crop as image pixels.
-- Explicit permanent blur/redaction application replaces the shared screenshot source, clears history and removes the old managed image. All exports are blocked while pixel edits or privacy cleanup remain pending. Use solid redaction for secrets; blur is only visual softening. External copies/backups and forensic disk remnants are not erased.
-- Reads legacy schema 1.0 guides; saves schema 1.1 with an original metadata backup. Older releases cannot read upgraded guides.
-- Adds Windows GDI pixel/transaction tests, canvas interaction tests, and a real packaged-WebView2 screenshot decoding smoke test using only synthetic data.
+1. **Better titles, less repetition.** Generated titles use detected control/field labels in bold, preserve their casing, and use sentence case for surrounding prose. Generated instructions stay blank unless you add useful detail. Duplicate legacy title/detail text is cleared; distinct custom instructions are retained. Existing titles can be formatted with Bold field / Clear bold.
+2. **Control-sized automatic highlights.** Capture prefers a pre-click hover snapshot and the nearest interactive control's actual UIA rectangle. Invalid/oversized/off-target bounds fall back to a small click ring for review. This affects new recordings; existing highlights remain editable. Unnamed controls still need review instead of fabricated descriptions. Typed field values and Edit.Name are not read; static labels or conservative known field identifiers are used.
+3. **Real Cut strip tool.** Remove horizontal or vertical sections—including browser chrome or interior gaps—and join the remaining image. Supports multiple cuts, undo/reset, zoom/crop and annotations; the result is included in file exports and clipboard screenshots. Cut/crop are reversible, not privacy redaction. Portable projects retain their source images.
+4. **Copy without saving files.** Copy HTML code gives a complete self-contained document as source text. Copy steps for Word gives rich text with bold field names and embedded screenshots; paste using Keep Source Formatting. The existing DOCX/Markdown/HTML/portable file exports remain available. No temporary export files are created by either clipboard action.
 
-Word DOCX, Markdown ZIP, styled self-contained HTML and portable package import/export remain available. `Capture-export-examples.zip` contains synthetic document samples.
+Guides now save as schema 1.2 with original schema 1.0/1.1 metadata backups before first upgrade. Older application versions cannot read upgraded guides. Blur/redaction must still be permanently applied, and privacy cleanup completed, before copying or exporting. Existing external copies and backups are not erased.
 
-This is an unsigned preview. Interactive capture/hotkeys/UIA/mixed DPI still need manual validation. PDF, manual image/region insertion, signing and hosted integrations are not included. Review screenshots before sharing.
+Automated checks include document structure/rendering, cut seams, Windows clipboard formats, actual Windows controls, and the packaged WebView2 image preview. Interactive capture/timing/mixed DPI still need manual validation. PDF, manual image insertion, signing and hosted integrations remain unfinished.

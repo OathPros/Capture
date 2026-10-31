@@ -11,10 +11,12 @@ public sealed class ProjectStore(string root)
         var json = GuideJson.Serialize(g);
         var dir = DirectoryFor(g.Id); Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, "guide.json");
-        if(File.Exists(path) && !File.Exists(Path.Combine(dir,"guide.v1.0.backup.json")))
+        if(File.Exists(path))
         {
             using var existing=System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(path));
-            if(existing.RootElement.GetProperty("schemaVersion").GetString()=="1.0.0") File.Copy(path,Path.Combine(dir,"guide.v1.0.backup.json"));
+            var version=existing.RootElement.GetProperty("schemaVersion").GetString();
+            if(version is "1.0.0" or "1.1.0")
+            { var backup=Path.Combine(dir,$"guide.v{version[..3]}.backup.json");if(!File.Exists(backup))File.Copy(path,backup); }
         }
         var temp = path + ".tmp";
         await File.WriteAllTextAsync(temp, json);
@@ -90,7 +92,8 @@ public sealed class ProjectStore(string root)
         var b = new StringBuilder().AppendLine("<!-- CAPTURE Markdown export 1.0; guide schema " + g.SchemaVersion + " -->").AppendLine().AppendLine("# " + Escape(g.Title)).AppendLine().AppendLine(Escape(g.Summary));
         foreach (var (s, i) in g.Steps.Select((s,i)=>(s,i)))
         {
-            b.AppendLine().AppendLine($"## {i+1}. {Escape(s.Title)}").AppendLine().AppendLine(Escape(s.Instruction));
+            b.AppendLine().AppendLine($"## {i+1}. {StepText.Markdown(s.Title,s.TitleFields)}");
+            if(!string.IsNullOrWhiteSpace(s.Instruction))b.AppendLine().AppendLine(StepText.Markdown(s.Instruction,s.TitleFields));
             if (!string.IsNullOrWhiteSpace(s.Notes)) b.AppendLine().AppendLine(Escape(s.Notes));
             if (s.AssetId is not null) b.AppendLine().AppendLine($"![Step {i+1} screenshot](assets/step-{i+1:D3}.png)");
         }

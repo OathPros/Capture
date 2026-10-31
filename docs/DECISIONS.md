@@ -39,3 +39,10 @@
 - Privacy: Preview blur/redaction layers cannot be exported. Explicit permanent apply sanitizes a new asset, durably records cleanup intent, replaces shared-step references, deletes the old source, then clears the intent. Undo history is reset. Failed metadata save preserves the original; cleanup failures remain export-blocking and retryable. Crop stays reversible and does not imply redaction.
 - Compatibility: Read schema 1.0 and 1.1; write 1.1 with a legacy metadata backup. No promise of compatibility with older application binaries or forensic erasure.
 - Evidence: Geometry/schema/transaction/pixel/browser tests plus a real Windows WebView2 screenshot decoding smoke test. Interactive desktop capture still has its separate manual gate.
+
+## ADR-008 — Version 4 capture quality, strip cuts and clipboard
+- Trigger: User requested useful non-repeating step text, fitted automatic highlights, a real section-cut tool, and file-free HTML/Word copy.
+- Choice: Literal field-name runs (not arbitrary HTML/Markdown), conservative UIA static labels/identifier vocabulary, sentence-case templates, duplicate-detail cleanup, nearest interactive ancestor bounds and a pre-click hover cache. Unknown targets remain review-marked.
+- Cut: Store up to 32 original-coordinate horizontal/vertical intervals. Merge them into pixel axis segments; join source tiles and project annotations afterward. UI and native exporters share the same rounding/geometry contract. No destructive source replacement for cuts; portable projects preserve editable originals.
+- Clipboard: HTML source text and Word-ready RTF containing PNGs. Word receives RTF/Unicode only because CF_HTML with data-image URLs can lose images in Word. Render in memory, then set the Windows clipboard on STA; preserve file exports separately. Word's user paste preferences can still choose plain text.
+- Schema: 1.2 adds title fields/cut intervals and backs up older metadata before the first save. Full capture-provider/mixed-DPI behavior remains a separate manual gate.

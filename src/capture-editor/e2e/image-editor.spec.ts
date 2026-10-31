@@ -6,10 +6,11 @@ async function host(page:Page,missing=false){
  await page.addInitScript(({png,missing})=>{
   const listeners:((event:any)=>void)[]=[];
   let guide:any={schemaVersion:'1.1.0',id:'00000000-0000-0000-0000-000000000001',title:'Synthetic screenshot workflow',summary:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),pendingAssetDeletes:[],assets:[{id:'image',relativePath:'assets/image.png',mimeType:'image/png',width:1600,height:800,sha256:'0'.repeat(64)}],steps:[{id:'step',order:1,title:'Annotate the screenshot',instruction:'Use synthetic content.',notes:'',assetId:'image',annotations:[],needsReview:true,crop:null}]};
-  (window as any).__guide=guide;(window as any).__imageMissing=missing;(window as any).__commands=[];
+  (window as any).__guide=guide;(window as any).__imageMissing=missing;(window as any).__commands=[];(window as any).__copies=[];
   (window as any).chrome={webview:{addEventListener:(_:string,fn:any)=>listeners.push(fn),postMessage:(m:any)=>{
    (window as any).__commands.push(m.type);let result:any={},error='';if(m.type==='editor.ready')result={guide};
    if(m.type==='asset.read'){if((window as any).__imageMissing)error='This screenshot file is missing.';else result={url:'data:image/png;base64,'+png,width:1600,height:800};}
+   if(m.type==='clipboard.copy'){if((window as any).__failCopy)error='The Windows clipboard is busy. Try copying again.';else{(window as any).__copies.push({format:m.payload.format,title:guide.steps[0].title,fields:guide.steps[0].titleFields||[]});result={copied:true};}}
    if(m.type==='project.save'){guide=m.payload;(window as any).__guide=guide;result={saved:true};}if(m.type==='project.list')result=[guide];if(m.type==='project.open')result=guide;
    if(m.type==='asset.applyPixelEdits'){guide={...guide,assets:guide.assets.map((a:any)=>({...a,id:'sanitized',sha256:'1'.repeat(64)})),steps:guide.steps.map((s:any)=>({...s,assetId:'sanitized',annotations:s.annotations.filter((a:any)=>!['blur','redact'].includes(a.kind))}))};(window as any).__guide=guide;result={guide};}
    setTimeout(()=>listeners.forEach(fn=>fn({data:{requestId:m.requestId,ok:!error,result,error}})),0);
@@ -40,4 +41,29 @@ test('missing screenshot has an error and retry',async({page})=>{
 });
 test('permanent blur and redaction clear undo history',async({page})=>{
  await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await draw(page,'Blur');await page.getByLabel('Blur strength',{exact:true}).press('ArrowRight');await draw(page,'Redact',{x:.5,y:.5},{x:.8,y:.8});await page.getByRole('button',{name:'Apply blur/redaction permanently',exact:true}).click();await expect(page.locator('[data-kind=blur], [data-kind=redact]')).toHaveCount(0);await expect(page.getByRole('button',{name:'Undo',exact:true})).toBeDisabled();expect(await page.evaluate(()=>(window as any).__guide.assets[0].id)).toBe('sanitized');
+});
+
+test('cut removes horizontal and vertical strips, joins the image and supports undo/reset',async({page})=>{
+ await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();
+ await draw(page,'Cut strip',{x:.1,y:.1},{x:.8,y:.2});await page.getByRole('button',{name:'Apply cut',exact:true}).click();
+ await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toHaveAttribute('viewBox','0 0 1600 720');
+ await page.getByRole('button',{name:'Cut strip',exact:true}).click();await page.getByLabel('Cut direction',{exact:true}).selectOption('vertical');
+ await draw(page,'Cut strip',{x:.2,y:.2},{x:.3,y:.8});await page.getByRole('button',{name:'Apply cut',exact:true}).click();
+ await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toHaveAttribute('viewBox','0 0 1440 720');
+ const g=await saved(page);expect(g.steps[0].cuts.map((c:any)=>c.axis)).toEqual(['horizontal','vertical']);
+ await page.getByRole('button',{name:'Undo edit',exact:true}).click();await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toHaveAttribute('viewBox','0 0 1600 720');
+ await page.getByRole('button',{name:'Reset cuts',exact:true}).click();await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toHaveAttribute('viewBox','0 0 1600 800');
+});
+test('bold fields and both clipboard buttons save first without opening a file dialog',async({page})=>{
+ await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();
+ const title=page.getByLabel('Step title',{exact:true});await title.fill('Select Save draft');await title.press('End');for(let i=0;i<10;i++)await title.press('Shift+ArrowLeft');
+ await page.getByRole('button',{name:'Bold field',exact:true}).click();await expect(page.locator('.title-preview strong')).toHaveText('Save draft');
+ await page.getByRole('button',{name:'Copy HTML code',exact:true}).click();await expect(page.getByRole('status')).toHaveText('HTML code copied');
+ await page.getByRole('button',{name:'Copy steps for Word',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Word steps copied — paste into Word');
+ expect(await page.evaluate(()=>(window as any).__copies)).toEqual(['html','word'].map(format=>({format,title:'Select Save draft',fields:['Save draft']})));
+ expect(await page.evaluate(()=>(window as any).__commands.includes('export.request'))).toBe(false);
+});
+test('clipboard failure retains the edited guide',async({page})=>{
+ await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await page.getByLabel('Step title',{exact:true}).fill('Preserve this edit');await page.evaluate(()=>(window as any).__failCopy=true);
+ await page.getByRole('button',{name:'Copy steps for Word',exact:true}).click();await expect(page.getByRole('alert')).toContainText('clipboard is busy');await expect(page.getByLabel('Step title',{exact:true})).toHaveValue('Preserve this edit');
 });
