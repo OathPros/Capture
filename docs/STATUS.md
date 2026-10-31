@@ -16,10 +16,10 @@ Windows capture preview with the requested DOCX, Markdown and HTML exports. Full
 - Core suite: 28 passed, including DOCX Open XML schema validation, image relationships/size/aspect/alt text, multilingual and long content, Markdown link/asset completeness, offline HTML escaping/CSP, text-only guides and missing-image failures.
 - Editor unit suite: 2 passed. Browser suite: 3 passed, covering native export command formats, save-before-export and standalone HTML desktop/mobile behavior.
 - Generated DOCX opened and rendered by LibreOffice to Letter-size pages. HTML visually inspected at desktop/mobile sizes; images decoded, no horizontal overflow, no external requests.
-- Earlier Windows preview CI/release passed; current export release must pass Windows CI separately.
+- GitHub Actions Windows export release run 41195294077 passed: 28 core tests, 4 actual Windows image-rendering tests, 2 editor unit tests and 3 browser tests (37 total), build and packaging. Release v0.2.0-preview.1 includes the Windows app and sample exports.
 
 ## Windows checks
-The new Windows test project exercises actual GDI PNG rendering through DOCX, Markdown and HTML, checks red highlight pixels/unchanged originals, and rejects changed source checksums. It compiles on Linux but executes only on Windows. scripts/test.ps1 and GitHub Actions run it on Windows.
+The new Windows test project exercises actual GDI PNG rendering through DOCX, Markdown and HTML, checks red highlight pixels/unchanged originals, and rejects changed source checksums. It compiles on Linux and all four tests passed on Windows in release run 41195294077. scripts/test.ps1 and GitHub Actions run it on Windows.
 
 Interactive capture, hotkeys, UIA, protected surfaces, timing/mixed DPI, native save dialogs and full packaged-app startup still need the manual Windows matrix. Automated document/pixel tests do not establish those outcomes.
 
