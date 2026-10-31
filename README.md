@@ -6,7 +6,7 @@ CAPTURE records mouse interactions across Windows applications and turns them in
 
 ## Download and run
 
-1. Open this repository's **Releases** and choose the latest Windows preview. Download `Capture-0.1.0-preview.1-win-x64.zip`. If no release has been produced yet, open **Actions → Build Windows preview**, choose a successful run, and download the `Capture-Windows-x64-preview` artifact.
+1. Open this repository's **Releases** and choose the latest Windows preview. Download `Capture-0.1.0-preview.2-win-x64.zip`. If no release has been produced yet, open **Actions → Build Windows preview**, choose a successful run, and download the `Capture-Windows-x64-preview` artifact.
 2. Extract the entire ZIP to a folder you control. Run **Capture.App.exe**; keep the companion DLLs and `editor` folder together.
 3. Requires **Windows 11 x64** and the **Microsoft Edge WebView2 Evergreen Runtime**. The .NET runtime is included; you do not need Visual Studio, Node or the .NET SDK to run the ZIP. Install WebView2 from Microsoft's official site if startup reports it missing: https://developer.microsoft.com/microsoft-edge/webview2/ .
 4. This preview is unsigned. Windows or your organization's policy may block it. Follow your organization's approval process; do not bypass enterprise controls.

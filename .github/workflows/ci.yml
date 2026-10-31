@@ -36,7 +36,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Capture-Windows-x64-preview
-          path: artifacts/Capture-0.1.0-preview.1-win-x64.zip
+          path: artifacts/Capture-0.1.0-preview.2-win-x64.zip
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/')

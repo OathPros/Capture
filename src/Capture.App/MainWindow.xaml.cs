@@ -190,7 +190,7 @@ public partial class MainWindow : Window
             if(busy || MessageBox.Show("Discard this recording and its saved screenshots?","Cancel recording",MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
             busy=true;
             try { await recorder!.FinishAsync(); var dir=store.DirectoryFor(recorder.Guide.Id); recorder.Dispose(); recorder=null; if(Directory.Exists(dir)) Directory.Delete(dir,true); session.Reset(); toolbar.Close(); toolbar=null; Show(); tray.Text="CAPTURE — not recording"; }
-            catch(Exception ex) { recordingBlocked=true; MessageBox.Show("Could not finish cancellation. Restart Capture; saved draft may remain.\n"+ex.Message); }
+            catch(Exception ex) { recordingBlocked=true; session.Reset(); toolbar?.Close(); toolbar=null; Show(); tray.Text="CAPTURE — restart required"; MessageBox.Show("Could not finish cancellation. Use Exit in the tray, then restart Capture. A saved draft may remain.\n"+ex.Message); }
             finally { busy=false; }
         };
         actions.Children.Add(pause); actions.Children.Add(finish); actions.Children.Add(cancel); panel.Children.Add(actions); toolbar.Content=panel;

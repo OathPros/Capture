@@ -17,6 +17,8 @@ M1 — first Windows capture-to-editor preview. Interactive acceptance is **UNVE
 - Vitest: **2 passed** (reorder identity/order and bounds).
 - Playwright with system Chromium: **2 passed** (mocked host create/edit/save/reorder/undo/export/reopen; browser without native host).
 - Self-contained Windows x64 `dotnet publish`: passed, executable and bundled editor produced.
+- The exact checked-in PowerShell build/test/package/smoke scripts passed on Linux; all 23 tests passed.
+- GitHub Actions Windows run 41193933023 passed build, 19 core tests, editor tests and ZIP packaging; preview.1 published. Preview.2 fixes cancellation-timeout cleanup.
 - Native UI, capture and exported screenshots have **not** been run or visually validated on Windows. Browser tests use a mock host, not Win32.
 
 ## Blocked / unverified

@@ -1,5 +1,7 @@
 # CAPTURE 0.1.0 — Windows preview
 
+Preview 2 also ensures a stalled accessibility provider cannot prevent exiting after a failed cancellation.
+
 Download the Windows x64 ZIP, extract all files, and run Capture.App.exe. Requires Windows 11 x64 and Microsoft Edge WebView2 Runtime. .NET is bundled.
 
 Includes explicit click recording, pause/finish/cancel, Ctrl+Shift+R (configurable), process exclusions, pre-action monitor screenshots, UIA labels with safe fallback, draft persistence, projects, editable text and highlights, undo/reorder, Markdown ZIP and portable package import/export.

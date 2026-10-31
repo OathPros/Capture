@@ -7,6 +7,6 @@ try {
         if (-not (Test-Path "artifacts/Capture-win-x64/$file")) { throw "Missing packaged file: $file" }
     }
     Copy-Item README.md,docs/RELEASE-NOTES.md artifacts/Capture-win-x64
-    Compress-Archive -Path artifacts/Capture-win-x64/* -DestinationPath artifacts/Capture-0.1.0-preview.1-win-x64.zip -Force
-    Get-FileHash artifacts/Capture-0.1.0-preview.1-win-x64.zip -Algorithm SHA256 | Format-List
+    Compress-Archive -Path artifacts/Capture-win-x64/* -DestinationPath artifacts/Capture-0.1.0-preview.2-win-x64.zip -Force
+    Get-FileHash artifacts/Capture-0.1.0-preview.2-win-x64.zip -Algorithm SHA256 | Format-List
 } finally { Pop-Location }
