@@ -1,3 +1,20 @@
+# YU Capture 0.4.0-preview.2 — Windows installer
+
+Download `YU-Capture-0.4.0-preview.2-Setup-x64.exe`, open it, and choose Install. Launch YU Capture from the final setup screen or Windows Start menu. No ZIP extraction or separate .NET installation is required.
+
+- Installs for the current Windows account, with a Start menu shortcut and optional desktop shortcut.
+- Installs Microsoft Edge WebView2 if missing. This prerequisite step requires internet access.
+- Adds uninstall support in Windows Settings. Saved projects under `%LOCALAPPDATA%\Capture` are preserved.
+- To update, exit Capture from the tray and run the new installer.
+- Requires Windows 11 x64. This preview is unsigned; follow your organization's software approval process.
+- Windows CI checks installation, repeated installation, launch of the installed app with real WebView2 screenshot decoding, and uninstall with user-file preservation. Clean-machine prerequisite installation and interactive capture still need manual validation.
+
+The portable `Capture-0.4.0-preview.2-win-x64.zip` remains available for advanced users. It requires manual extraction and WebView2 installation if missing.
+
+The application features and schema are unchanged from 0.4.0-preview.1. Older app versions cannot read schema 1.2 guides. No automatic updater is included.
+
+---
+
 # CAPTURE 0.4.0 — Capture quality and clipboard
 
 Download `Capture-0.4.0-preview.1-win-x64.zip`, extract the full ZIP, exit the older app from its tray icon, and run Capture.App.exe. Requires Windows 11 x64 and WebView2 Runtime; .NET is bundled. This is still a portable, unsigned preview.

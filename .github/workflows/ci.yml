@@ -27,6 +27,16 @@ jobs:
       - name: Run core and browser tests
         shell: pwsh
         run: ./scripts/test.ps1
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Could not install Inno Setup.' }
+          }
+          if (-not (Test-Path $compiler)) { throw 'Inno Setup compiler was not found.' }
+          (Get-Item $compiler).VersionInfo | Format-List ProductVersion
       - name: Package self-contained Windows x64 app
         shell: pwsh
         run: ./scripts/package.ps1
@@ -46,15 +56,19 @@ jobs:
       - name: Verify package contents
         shell: pwsh
         run: ./scripts/smoke-test.ps1
+      - name: Verify installer, upgrade and uninstall
+        shell: pwsh
+        run: ./scripts/test-installer.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: Capture-Windows-x64-preview
           path: |
-            artifacts/Capture-0.4.0-preview.1-win-x64.zip
+            artifacts/YU-Capture-*-Setup-x64.exe
+            artifacts/Capture-0.4.0-preview.2-win-x64.zip
             artifacts/Capture-export-examples.zip
           if-no-files-found: error
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: windows
     runs-on: ubuntu-latest
     permissions:
@@ -68,4 +82,15 @@ jobs:
       - name: Publish tested build as a prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" artifacts/*.zip --prerelease --title "CAPTURE 0.4.0 — Capture quality and clipboard" --notes-file docs/RELEASE-NOTES.md
+        run: |
+          version=$(python -c "import xml.etree.ElementTree as E; print(E.parse('src/Capture.App/Capture.App.csproj').findtext('./PropertyGroup/Version'))")
+          tag="v$version"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+            echo "Tag does not match app version" >&2
+            exit 1
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; preserving published assets."
+            exit 0
+          fi
+          gh release create "$tag" artifacts/*.zip artifacts/*-Setup-x64.exe --target "$GITHUB_SHA" --prerelease --title "YU Capture $version — Windows installer" --notes-file docs/RELEASE-NOTES.md
