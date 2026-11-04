@@ -6,12 +6,15 @@ CAPTURE records mouse interactions across Windows applications and turns them in
 
 ## Download and run
 
-1. Open this repository's **Releases** and choose the latest Windows preview. Download `Capture-0.4.0-preview.1-win-x64.zip`. If no release has been produced yet, open **Actions → Build Windows preview**, choose a successful run, and download the `Capture-Windows-x64-preview` artifact.
-   The optional `Capture-export-examples.zip` download contains synthetic sample DOCX, HTML and Markdown outputs for review.
-2. Extract the entire ZIP to a folder you control. Run **Capture.App.exe**; keep the companion DLLs and `editor` folder together.
-3. Exit any older Capture instance from the tray before replacing files or opening the new version. Existing schema 1.0/1.1 guide metadata is backed up as `guide.v1.0.backup.json` / `guide.v1.1.backup.json` when first saved as schema 1.2; older app versions cannot read the upgraded schema. Screenshot files stay unchanged until you explicitly apply pixel edits.
-4. Requires **Windows 11 x64** and the **Microsoft Edge WebView2 Evergreen Runtime**. The .NET runtime is included; you do not need Visual Studio, Node or the .NET SDK to run the ZIP. Install WebView2 from Microsoft's official site if startup reports it missing: https://developer.microsoft.com/microsoft-edge/webview2/ .
-5. This preview is unsigned. Windows or your organization's policy may block it. Follow your organization's approval process; do not bypass enterprise controls.
+1. Open the download page or this repository’s **Releases**. For releases containing an installer, download `YU-Capture-<version>-Setup-x64.exe` and run it.
+2. Follow the setup wizard, then choose **Launch YU Capture**, or open it from the Windows Start menu. The installer installs for your Windows account without requiring administrator privileges for YU Capture itself. A desktop shortcut is optional.
+3. Requires **Windows 11 x64**. The .NET runtime is included. Setup installs Microsoft Edge WebView2 if it is missing; that step requires internet access and may be restricted by your organization.
+4. To update, exit Capture from its tray icon and run the newer installer. To uninstall, use **Windows Settings → Apps → YU Capture**. Uninstall preserves saved projects under `%LOCALAPPDATA%\Capture`; back up full project folders before upgrades. Older app versions cannot open guides upgraded to newer schemas.
+5. This preview remains unsigned. Windows or organizational policies may block it. Follow your organization’s approval process.
+
+**Availability:** installer support is implemented in source but has not yet been built or published. The previously published v0.4.0-preview.1 release is a portable ZIP: extract the entire ZIP and run `Capture.App.exe`, keeping companion DLLs and the `editor` folder together. That ZIP requires WebView2 to be installed separately. Do not describe an installer as available until its Windows build and installer tests pass.
+
+See [installer design and release checks](docs/INSTALLER.md). The optional `Capture-export-examples.zip` contains synthetic sample exports.
 
 ## Record, edit and export
 

@@ -17,3 +17,8 @@ Version 4 quality-of-life update: meaningful capture text, fitted highlights, re
 
 ## Remaining limits
 Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, manual image insertion, signing, WGC replacement and hosted integrations remain unfinished.
+
+## Installer packaging (implemented, Windows verification pending)
+- Added an Inno Setup per-user Windows 11 x64 wizard, Start menu/optional desktop shortcuts, Windows Settings uninstall, and conditional Microsoft WebView2 installation. App .NET runtime remains bundled; saved projects are outside the install directory.
+- Windows CI now builds and publishes Setup EXEs alongside ZIPs and exercises silent install, repeated install, installed-app screenshot smoke, and uninstall. These new Windows checks have not been run in this Linux session.
+- The download page prefers actual published installer assets; the existing release remains a portable ZIP until a new installer is built and published. App/installer signing and automatic updates remain unimplemented. See INSTALLER.md for remaining manual gates.

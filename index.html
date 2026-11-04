@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Download YU Capture for Windows, see the current version and browse past releases.">
+<title>YU Capture — Downloads</title>
+<style>
+:root{--red:#b4152d;--ink:#252025;--muted:#70666c;--line:#e6dfe2}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#faf8f7;color:var(--ink);font:16px/1.65 system-ui,sans-serif}a{color:var(--red);text-underline-offset:4px}a:focus-visible{outline:3px solid var(--red);outline-offset:5px}header,main,footer{max-width:1000px;margin:auto;padding:0 28px}header{height:94px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{font-size:21px;font-weight:800;letter-spacing:-.7px}.mark{background:var(--red);color:white;padding:6px 9px;border-radius:6px;margin-right:9px}nav{display:flex;gap:22px;font-size:14px}nav a{color:var(--muted);text-decoration:none}.hero{padding:60px 0 32px}.eyebrow{text-transform:uppercase;font-size:12px;font-weight:750;letter-spacing:2px;color:var(--red)}h1{font-size:clamp(38px,6vw,62px);line-height:1.1;letter-spacing:-2px;margin:18px 0 23px}h2{font-size:25px;letter-spacing:-.7px;margin:0 0 15px}.lead{max-width:650px;font-size:19px;color:var(--muted)}.card{background:white;border:1px solid var(--line);border-top:4px solid var(--red);border-radius:12px;padding:30px;display:flex;align-items:center;justify-content:space-between;gap:24px}.badge{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:#fae9ed;border-radius:20px;padding:5px 10px;font-weight:750}.version{font-size:30px;font-weight:750;letter-spacing:-1px;margin-top:12px}.small{font-size:13px;color:var(--muted)}.button{display:inline-block;padding:13px 22px;background:var(--red);color:white;text-decoration:none;border-radius:7px;font-size:15px;font-weight:700}.button:hover{background:#921125}.action{text-align:center}.action p{margin:9px 0 0}section.content{padding:40px 0;border-bottom:1px solid var(--line)}ol{list-style:none;counter-reset:step;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin:24px 0}li{counter-increment:step}li:before{content:'0' counter(step);font-size:13px;font-weight:750;color:var(--red)}h3{font-size:16px;margin:8px 0 4px}li p{font-size:14px;color:var(--muted);margin:0}code{font-size:.9em;background:#efecef;padding:2px 4px;border-radius:3px}.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:20px}.release{padding:18px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;align-items:center}.links{display:flex;gap:18px;font-size:14px}footer{padding-top:25px;padding-bottom:35px;display:flex;justify-content:space-between;gap:20px;font-size:12px;color:var(--muted)}@media(max-width:650px){header,main,footer{padding-left:20px;padding-right:20px}nav{gap:14px;font-size:12px}.hero{padding-top:38px}.card{display:block;padding:24px}.action{text-align:left;margin-top:20px}ol{grid-template-columns:1fr;gap:22px}.section-head,.release,footer{display:block}.links{margin-top:10px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="mark">YU</span>Capture</div><nav aria-label="Main navigation"><a href="#install">Installation</a><a href="#versions">Past versions</a></nav></header>
+<main>
+<section class="hero"><div class="eyebrow">YU Capture / Downloads</div><h1>Turn your workflow<br>into a how-to.</h1><p class="lead">Record a Windows workflow, refine the screenshots, and share a step-by-step guide. Download YU Capture to get started.</p></section>
+<section class="card" aria-label="Current download"><div><span class="badge" id="label">Current preview</span><div class="version" id="version">v0.4.0-preview.1</div><div class="small" id="meta">Windows 11 x64 · .NET included</div></div><div class="action"><a class="button" id="download" href="https://github.com/OathPros/Capture/releases">Get Windows installer ↓</a><p class="small"><a id="notes" href="https://github.com/OathPros/Capture/releases/tag/v0.4.0-preview.1">Read release notes</a></p></div></section>
+<p class="small" id="installer-notice">The installer is being prepared for the next release. <a href="https://github.com/OathPros/Capture/releases/download/v0.4.0-preview.1/Capture-0.4.0-preview.1-win-x64.zip">Download the existing portable ZIP</a> in the meantime. Early, unsigned preview. Use sample data and review screenshots before sharing. Follow your organization’s software approval process.</p>
+<section class="content" id="install"><div class="eyebrow">Get started</div><h2>Up and running in three steps.</h2><ol><li><h3>Download the installer</h3><p>Save the YU Capture Setup file, then open it from your browser’s downloads.</p></li><li><h3>Follow the setup wizard</h3><p>Choose Install. Setup keeps all files together and installs Microsoft WebView2 if needed. No .NET download is required.</p></li><li><h3>Launch and capture</h3><p>Choose Launch at the end of setup, or open YU Capture from the Windows Start menu.</p></li></ol><p class="small">Requires Windows 11 x64. Setup needs internet access if Microsoft WebView2 is missing. To update, exit Capture from the tray and run the new installer. Uninstall from Windows Settings → Apps; saved projects are preserved.</p></section>
+<section class="content" id="versions"><div class="section-head"><div><div class="eyebrow">Release archive</div><h2>Past versions</h2></div><a class="small" href="https://github.com/OathPros/Capture/releases">All releases on GitHub ↗</a></div><p class="small">Download a previous release below. Older versions may not open guides saved by newer versions.</p><p class="small" id="status" role="status">Loading published releases…</p><div id="releases"></div><noscript><p><a href="https://github.com/OathPros/Capture/releases">Browse previous versions on GitHub.</a> The release downloads work without JavaScript.</p></noscript></section>
+</main><footer><span>YU Capture · Local-first workflow documentation.</span><a href="https://github.com/OathPros/Capture">Project & documentation ↗</a></footer>
+<script>
+// Includes prereleases: GitHub's /releases/latest endpoint excludes previews.
+const repository = 'OathPros/Capture';
+function safeUrl(value, kind = 'tag') {
+  try { const url = new URL(value); return url.origin === 'https://github.com' && url.pathname.startsWith(`/${repository}/releases/${kind}/`) ? url.href : null; } catch { return null; }
+}
+const installerFor = release => (release.assets || []).find(asset => /^YU-Capture-.+-Setup-x64\.exe$/i.test(asset.name) && safeUrl(asset.browser_download_url, 'download'));
+const packageFor = release => installerFor(release) || (release.assets || []).find(asset => /^Capture-.+-win-x64\.zip$/i.test(asset.name) && safeUrl(asset.browser_download_url, 'download'));
+function dateLabel(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric',timeZone:'America/New_York'}); }
+async function loadReleases() {
+  const status = document.getElementById('status');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    let releases = [];
+    for (let page = 1; page <= 5; page++) {
+      const response = await fetch(`https://api.github.com/repos/${repository}/releases?per_page=100&page=${page}`, {signal:controller.signal,credentials:'omit',headers:{Accept:'application/vnd.github+json'}});
+      if (!response.ok) throw new Error('Unavailable');
+      const batch = await response.json();
+      if (!Array.isArray(batch)) throw new Error('Invalid response');
+      releases.push(...batch);
+      if (batch.length < 100) break;
+    }
+    releases = releases.filter(release => !release.draft && safeUrl(release.html_url) && packageFor(release)).sort((a,b) => new Date(b.published_at)-new Date(a.published_at));
+    if (!releases.length) throw new Error('No packages');
+    const current = releases[0], asset = packageFor(current);
+    document.getElementById('version').textContent = current.tag_name;
+    document.getElementById('label').textContent = current.prerelease ? 'Current preview' : 'Current release';
+    document.getElementById('download').href = safeUrl(asset.browser_download_url,'download');
+    document.getElementById('download').textContent = installerFor(current) ? 'Download for Windows ↓' : 'Download portable ZIP ↓';
+    if (installerFor(current)) document.getElementById('installer-notice').textContent = 'Early, unsigned preview. Windows may show a security warning. Follow your organization’s software approval process. Use sample data and review screenshots before sharing.';
+    document.getElementById('notes').href = safeUrl(current.html_url);
+    document.getElementById('meta').textContent = `Windows 11 x64 · ${dateLabel(current.published_at)}${Number.isFinite(asset.size) ? ' · '+(asset.size/1048576).toFixed(1)+' MB' : ''}`;
+    const fragment = document.createDocumentFragment();
+    for (const release of releases.slice(1)) {
+      const row = document.createElement('div'); row.className = 'release';
+      const info = document.createElement('div');
+      const name = document.createElement('strong'); name.textContent = release.tag_name;
+      const meta = document.createElement('div'); meta.className = 'small'; meta.textContent = `${dateLabel(release.published_at)} · ${release.prerelease ? 'Preview' : 'Release'}`;
+      info.append(name,meta);
+      const links = document.createElement('div'); links.className = 'links';
+      const notes = document.createElement('a'); notes.textContent = 'Release notes'; notes.href = safeUrl(release.html_url);
+      const download = document.createElement('a'); download.textContent = installerFor(release) ? 'Download installer ↓' : 'Portable ZIP ↓'; download.href = safeUrl(packageFor(release).browser_download_url,'download'); download.setAttribute('aria-label',`Download ${release.tag_name} for Windows`);
+      links.append(notes,download); row.append(info,links); fragment.append(row);
+    }
+    document.getElementById('releases').replaceChildren(fragment);
+    status.textContent = releases.length > 1 ? `${releases.length-1} previous ${releases.length === 2 ? 'release' : 'releases'}.` : 'No previous downloadable releases have been published yet.';
+  } catch {
+    status.textContent = 'The release list could not be refreshed. Browse all releases on GitHub for the latest version and previous downloads. The button above opens the GitHub release downloads.';
+  } finally { clearTimeout(timeout); }
+}
+loadReleases();
+</script>
+</body></html>
