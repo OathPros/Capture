@@ -16,9 +16,9 @@ The YU Capture installer and app remain unsigned. A typical wizard does not elim
 
 ## Build and release
 
-On Windows, install Inno Setup 6 in its default directory, then run the existing build/test scripts followed by `scripts/package.ps1`. CI installs Inno Setup 6.4.3. Packaging publishes the self-contained app, retains the portable ZIP, builds the EXE and reports its SHA-256 hash. The EXE version comes from Capture.App.csproj.
+On Windows, install Inno Setup 6 in its default directory, then run the existing build/test scripts followed by `scripts/package.ps1`. CI uses the runner’s installed Inno Setup 6 compiler, installing it only when absent. Packaging publishes the self-contained app, retains the portable ZIP, builds the EXE and reports its SHA-256 hash. The EXE version comes from Capture.App.csproj.
 
-CI runs `scripts/test-installer.ps1` after the existing packaged-app smoke test. This performs silent install, repeated installation, file verification, launch of the installed app's real WebView2 screenshot smoke mode, and uninstall while verifying a user-created sentinel file survives. Tag releases publish both EXE and ZIP after the Windows job passes. The download page prefers installer assets over ZIP assets and updates its primary button automatically. The older ZIP remains explicitly available until an installer is actually published.
+CI runs `scripts/test-installer.ps1` after the existing packaged-app smoke test. This performs silent install, repeated installation, file verification, launch of the installed app's real WebView2 screenshot smoke mode, and uninstall while verifying a user-created sentinel file survives. Main-branch pushes and matching version tags publish both EXE and ZIP after the Windows job passes. Existing release assets are preserved; new releases require a new app version. The download page prefers installer assets over ZIP assets and updates its primary button automatically. The older ZIP remains explicitly available until an installer is actually published.
 
 ## Verification and remaining gates
 
