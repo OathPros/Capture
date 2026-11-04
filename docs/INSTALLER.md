@@ -22,6 +22,6 @@ CI runs `scripts/test-installer.ps1` after the existing packaged-app smoke test.
 
 ## Verification and remaining gates
 
-The Linux development environment cannot compile Inno Setup or run Windows installers. Source checks and simulated download-page checks are available here; Windows CI must establish installer build and execution results. No installer release has been produced by this change.
+The Linux development environment cannot compile Inno Setup or run Windows installers. Source checks and simulated download-page checks are available here; Windows CI must establish installer build and execution results. Windows PR run 41833015580 subsequently passed the full app build and tests, installer compilation, installation, repeat installation, installed-app WebView2 screenshot smoke test, and uninstall. Main run 41833444333 repeated and passed those checks, then published preview.2 with the Setup EXE and ZIP. The release asset was confirmed uploaded through GitHub.
 
 Before distribution, manually check a clean Windows 11 user account without WebView2, a disconnected machine, institutional installation restrictions, install/update while Capture is running, Start menu/desktop shortcuts, Windows Settings uninstall, project preservation, display scaling, and unsigned-publisher prompts. CI machines commonly already have WebView2, so their install tests alone do not verify prerequisite installation.

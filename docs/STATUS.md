@@ -18,7 +18,9 @@ Version 4 quality-of-life update: meaningful capture text, fitted highlights, re
 ## Remaining limits
 Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, manual image insertion, signing, WGC replacement and hosted integrations remain unfinished.
 
-## Installer packaging (implemented, Windows verification pending)
-- Added an Inno Setup per-user Windows 11 x64 wizard, Start menu/optional desktop shortcuts, Windows Settings uninstall, and conditional Microsoft WebView2 installation. App .NET runtime remains bundled; saved projects are outside the install directory.
-- Windows CI now builds and publishes Setup EXEs alongside ZIPs and exercises silent install, repeated install, installed-app screenshot smoke, and uninstall. These new Windows checks have not been run in this Linux session.
-- The download page prefers actual published installer assets; the existing release remains a portable ZIP until a new installer is built and published. App/installer signing and automatic updates remain unimplemented. See INSTALLER.md for remaining manual gates.
+## Installer preview 0.4.0-preview.2 — released
+- PR #1 merged; Windows main run 41833444333 passed all 95 existing tests, packaging, installed-app WebView2 screenshot decoding, installation, repeat installation and uninstall with user-file preservation.
+- Published `YU-Capture-0.4.0-preview.2-Setup-x64.exe` alongside the portable ZIP. Release asset upload and SHA-256 digest were verified through GitHub.
+- The per-user Windows 11 x64 installer adds Start menu/optional desktop shortcuts and Windows Settings uninstall, bundles .NET, and conditionally installs WebView2. Project data is outside the installation directory.
+- The GitHub Pages download page deployed successfully at https://oathpros.github.io/Capture/ and prefers published installer assets. The static download link also points to preview.2.
+- App/installer signing, automatic updates, clean-machine prerequisite installation and interactive capture remain manual/outstanding. See INSTALLER.md.
