@@ -23,6 +23,7 @@ OutputBaseFilename=YU-Capture-{#AppVersion}-Setup-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\branding\CAPTURE.ico
 DisableProgramGroupPage=yes
 DisableDirPage=yes
 UninstallDisplayIcon={app}\Capture.App.exe

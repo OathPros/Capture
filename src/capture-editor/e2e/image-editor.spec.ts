@@ -202,6 +202,7 @@ test('separate screenshot shortcut settings and persistent light/dark appearance
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
  await expect(page.locator('.document-actions>button')).toHaveCSS('background-color','rgb(27, 31, 39)');
  await expect(page.locator('.notice')).toHaveCount(0);
+ await expect.poll(()=>page.locator('.brand img').evaluate((img:HTMLImageElement)=>img.naturalWidth)).toBe(96);
  await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await page.evaluate(()=>scrollTo(0,0));
  if(process.env.CAPTURE_UI_PREVIEW)await page.screenshot({path:process.env.CAPTURE_UI_PREVIEW+'/dark.png',fullPage:true});
  await page.getByRole('button',{name:'Switch to light mode',exact:true}).click();

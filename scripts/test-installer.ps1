@@ -8,7 +8,7 @@ try {
     foreach ($pass in 1..2) {
         $process = Start-Process $installer.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$target`"") -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "Installer failed with exit code $($process.ExitCode)" }
-        foreach ($file in @('Capture.App.exe','Capture.App.dll','editor/index.html','WebView2Loader.dll','unins000.exe')) {
+        foreach ($file in @('Capture.App.exe','Capture.App.dll','editor/index.html','editor/capture-icon.png','editor/capture.ico','WebView2Loader.dll','unins000.exe')) {
             if (-not (Test-Path (Join-Path $target $file))) { throw "Installer is missing $file" }
         }
         $expected = (Get-FileHash "$RepoRoot/artifacts/Capture-win-x64/Capture.App.dll").Hash

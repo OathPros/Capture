@@ -1,6 +1,6 @@
 . "$PSScriptRoot/common.ps1"
 $path = Join-Path $RepoRoot 'artifacts/Capture-win-x64'
-foreach ($file in @('Capture.App.exe','Capture.App.dll','editor/index.html','WebView2Loader.dll')) {
+foreach ($file in @('Capture.App.exe','Capture.App.dll','editor/index.html','editor/capture-icon.png','editor/capture.ico','WebView2Loader.dll')) {
     if (-not (Test-Path "$path/$file")) { throw "Missing packaged file: $file" }
 }
 $assets = Get-ChildItem "$path/editor/assets/*.js"

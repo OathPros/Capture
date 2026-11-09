@@ -44,3 +44,9 @@ PDF and hosted integrations are not implemented; do not mark those specification
 5. Toggle dark/light modes; restart and verify preference persistence, title bar and recording toolbar. Keyboard-navigate the export menu and close it with Escape/outside click. Check focus/contrast at Windows scaling settings and an 800px editor width.
 6. Place blur/redaction edits on several images, including duplicated steps sharing an image. Choose Word/HTML/Markdown/portable or a clipboard action. Apply all and continue should sanitize every affected image once, clear undo, remove old managed originals and then continue directly to output. Check actual export pixels. Failure on a later source must leave the previous guide and source files intact; cleanup failure must block output and allow retry.
 7. Recording should start immediately; export/exit/individual apply/discard should show no reminder or confirmation message boxes. Discard immediately deletes that recording. Native file pickers and overwrite confirmation still work. Operational failures remain visible inline.
+
+
+## Custom application icon
+- After installing 0.5.0-preview.2, check the EXE, Start menu/optional desktop shortcut, taskbar/Alt+Tab, main window, system tray, recording toolbar, setup wizard and Windows Settings uninstall entry.
+- Compare small and large icons at 100%, 150% and 200% Windows scaling, in light and dark taskbar themes. Windows can cache an old pinned shortcut icon; unpin/re-pin if needed.
+- Check the editor header and browser favicon, plus the download-page header/favicon. Confirm the supplied artwork has no additional opaque background.
