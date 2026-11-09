@@ -1,3 +1,12 @@
+# YU Capture 0.5.0-preview.2 — Custom Windows icon
+
+- Uses the supplied Capture icon in the executable, taskbar, window, system tray, recording toolbar, installer and shortcuts.
+- Uses the matching artwork in the editor header, favicon and standalone download page, in both light and dark themes.
+- Includes the original Windows icon kit under `assets/branding`. The current installer is a conventional desktop application; the kit's MSIX target-size variants are preserved for future packaging.
+- Existing guides and settings remain compatible. No capture, editing or export behavior changes.
+
+---
+
 # YU Capture 0.5.0-preview.1 — Screenshots and workspace improvements
 
 - **Add image step** inserts a local image after the selected step, including in an empty guide.

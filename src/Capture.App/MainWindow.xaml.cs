@@ -49,7 +49,9 @@ public partial class MainWindow : Window
                     if (exclusions.Length > 100 || exclusions.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 100)) throw new InvalidDataException(); }
                 catch { hotkey = 0x52; screenshotHotkey = 0x53; exclusions = ["1password", "keepass", "bitwarden", "lastpass", "credential", "lockapp", "logonui"]; startupIssues.Add("Preferences could not be read. Open Settings to choose your shortcuts."); }
             }
-            tray.Icon = System.Drawing.SystemIcons.Application; tray.Text = "CAPTURE — not recording";
+            using (var iconStream = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/CAPTURE.ico")).Stream)
+            using (var icon = new System.Drawing.Icon(iconStream, System.Windows.Forms.SystemInformation.SmallIconSize))
+                tray.Icon = (System.Drawing.Icon)icon.Clone(); tray.Text = "CAPTURE — not recording";
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Open Capture", null, (_,_) => { Show(); Activate(); });
             menu.Items.Add("Start / finish recording", null, async (_,_) => await ToggleAsync());
@@ -73,7 +75,7 @@ public partial class MainWindow : Window
             Editor.CoreWebView2.WebMessageReceived += HandleMessage;
             Editor.Source = new Uri("https://capture.local/index.html"); initialized = true;
         }
-        catch (Exception ex) { if(ScreenshotSmoke.Enabled) { ScreenshotSmoke.Report("FAIL: "+ex.Message);exiting=true;tray.Dispose();System.Windows.Application.Current.Shutdown(1);return; } startupFailed = true; tray.Dispose(); Background = System.Windows.Media.Brushes.White; Foreground = System.Windows.Media.Brushes.Black;
+        catch (Exception ex) { if(ScreenshotSmoke.Enabled) { ScreenshotSmoke.Report("FAIL: "+ex.Message);exiting=true;DisposeTray();System.Windows.Application.Current.Shutdown(1);return; } startupFailed = true; DisposeTray(); Background = System.Windows.Media.Brushes.White; Foreground = System.Windows.Media.Brushes.Black;
             var panel = new StackPanel { Margin = new Thickness(40) };
             panel.Children.Add(new TextBlock { Text = "Capture could not start", FontSize = 24 });
             panel.Children.Add(new TextBlock { Text = "Check Microsoft Edge WebView2 Runtime and try again.\n\n" + ex.Message, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,20,0,20) });
@@ -100,7 +102,7 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.5.0-preview.1", guide = current, recording = session.State.ToString(), issues = startupIssues },
+                "editor.ready" => new { version = "0.5.0-preview.2", guide = current, recording = session.State.ToString(), issues = startupIssues },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), screenshotHotkey = ((char)screenshotHotkey).ToString(), hotkeyRegistered, screenshotHotkeyRegistered, exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "app.theme" => SetTheme(p.GetProperty("theme").GetString()),
@@ -190,7 +192,7 @@ public partial class MainWindow : Window
         if(ScreenshotSmoke.Enabled) Dispatcher.BeginInvoke(()=>
         {
             ScreenshotSmoke.Report("PASS: native asset.read, checksum validation, WebView2 bridge, CSP and SVG PNG preview decoded 640x360.");
-            exiting=true;tray.Dispose();Editor.Dispose();System.Windows.Application.Current.Shutdown(0);
+            exiting=true;DisposeTray();Editor.Dispose();System.Windows.Application.Current.Shutdown(0);
         });
         return new { received=true };
     }
@@ -271,7 +273,7 @@ public partial class MainWindow : Window
     }
     private void CreateToolbar()
     {
-        toolbar = new Window { Title = "CAPTURE recording", Width = 610, Height = 125, Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24,27,33)), Foreground = System.Windows.Media.Brushes.White, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowActivated = false, WindowStyle = WindowStyle.ToolWindow };
+        toolbar = new Window { Title = "CAPTURE recording", Icon = Icon, Width = 610, Height = 125, Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24,27,33)), Foreground = System.Windows.Media.Brushes.White, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowActivated = false, WindowStyle = WindowStyle.ToolWindow };
         var panel = new StackPanel { Margin = new Thickness(12) };
         recordingText = new TextBlock { Text = "● Recording · 0 steps", TextWrapping = TextWrapping.Wrap };
         panel.Children.Add(recordingText); var actions = new StackPanel { Orientation = Orientation.Horizontal };
@@ -299,6 +301,13 @@ public partial class MainWindow : Window
         toolbar.SourceInitialized += (_,_) => { recorder!.MaskWindow = new WindowInteropHelper(toolbar).Handle; if(!Native.SetWindowDisplayAffinity(new WindowInteropHelper(toolbar).Handle,0x11)) recordingText.Text="Toolbar exclusion unavailable; its rectangle will be masked in screenshots."; };
         toolbar.Closing += (_,e) => { if(session.State is SessionState.Recording or SessionState.Paused) e.Cancel=true; };
         toolbar.Show(); SetTheme(darkTheme ? "dark" : "light");
+    }
+    private void DisposeTray()
+    {
+        var icon = tray.Icon;
+        tray.Visible = false;
+        tray.Dispose();
+        icon?.Dispose();
     }
     private void PostError(string message)
     {
@@ -454,6 +463,6 @@ public partial class MainWindow : Window
         if(busy || exporting || capturing) return;
         if(session.State is SessionState.Recording or SessionState.Paused) { await ToggleAsync(); if(session.State != SessionState.Idle) return; }
         try { await FlushEditorAsync(); } catch { PostError("Editor changes could not be saved. Retry Save before exiting."); Show(); return; }
-        exiting=true; recorder?.Dispose(); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,1); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,3); tray.Dispose(); Editor.Dispose(); System.Windows.Application.Current.Shutdown();
+        exiting=true; recorder?.Dispose(); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,1); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,3); DisposeTray(); Editor.Dispose(); System.Windows.Application.Current.Shutdown();
     }
 }
