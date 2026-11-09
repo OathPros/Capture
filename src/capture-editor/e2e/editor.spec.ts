@@ -18,9 +18,9 @@ test('host bridge: create, edit, save, reorder, undo, export and reopen',async({
  });
  await page.goto('/');await expect(page.getByRole('heading',{name:'Your guides'})).toBeVisible();
  await page.getByRole('button',{name:'New text guide'}).click();await page.getByLabel('Guide title').fill('Synthetic training');
- await page.getByRole('button',{name:'+ Add text step'}).click();await page.getByLabel('Step title',{exact:true}).fill('First action');await page.getByLabel('Instruction',{exact:true}).fill('Select a fictional button.');
+ await page.getByRole('button',{name:'+ Add text step'}).click();await page.getByLabel('Step title',{exact:true}).fill('First action');if(!await page.getByLabel('Instruction',{exact:true}).isVisible())await page.getByRole('button',{name:'Step details',exact:true}).click();await page.getByLabel('Instruction',{exact:true}).fill('Select a fictional button.');
  await page.getByRole('button',{name:'+ Add text step'}).click();await page.getByLabel('Step title',{exact:true}).fill('Second action');
- await page.getByRole('button',{name:'Move up',exact:true}).click();await expect(page.locator('aside li').first()).toContainText('Second action');
+ await page.locator('aside li .step-select').nth(1).focus();await page.keyboard.press('Alt+ArrowUp');await expect(page.locator('aside li').first()).toContainText('Second action');
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('aside li').first()).toContainText('First action');
  await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Saved locally');
  await page.getByLabel('Guide title').fill('Saved before export');

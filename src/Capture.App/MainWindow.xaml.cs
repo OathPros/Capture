@@ -67,6 +67,8 @@ public partial class MainWindow : Window
             Editor.CoreWebView2.Settings.AreDevToolsEnabled = false;
             Editor.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             Editor.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            Editor.CoreWebView2.Settings.IsZoomControlEnabled = false;
+            Editor.ZoomFactor = 1;
             Editor.CoreWebView2.SetVirtualHostNameToFolderMapping("capture.local",Path.Combine(AppContext.BaseDirectory,"editor"),CoreWebView2HostResourceAccessKind.DenyCors);
             Editor.CoreWebView2.NavigationStarting += (_,e) => { if (e.Uri != "https://capture.local/index.html") e.Cancel = true; };
             Editor.CoreWebView2.NewWindowRequested += (_,e) => e.Handled = true;
@@ -102,7 +104,7 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.5.0-preview.2", guide = current, recording = session.State.ToString(), issues = startupIssues },
+                "editor.ready" => new { version = "0.6.0-preview.1", guide = current, recording = session.State.ToString(), issues = startupIssues },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), screenshotHotkey = ((char)screenshotHotkey).ToString(), hotkeyRegistered, screenshotHotkeyRegistered, exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "app.theme" => SetTheme(p.GetProperty("theme").GetString()),

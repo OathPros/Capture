@@ -2,10 +2,11 @@ import {test,expect,Page} from '@playwright/test';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 const png=readFileSync(resolve(process.cwd(),'../../tests/fixtures/landscape.png')).toString('base64');
-async function host(page:Page,missing=false){
- await page.addInitScript(({png,missing})=>{
+async function host(page:Page,missing=false,stepCount=1){
+ await page.addInitScript(({png,missing,portrait,stepCount})=>{
   const listeners:((event:any)=>void)[]=[];
   let guide:any={schemaVersion:'1.1.0',id:'00000000-0000-0000-0000-000000000001',title:'Synthetic screenshot workflow',summary:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),pendingAssetDeletes:[],assets:[{id:'image',relativePath:'assets/image.png',mimeType:'image/png',width:1600,height:800,sha256:'0'.repeat(64)}],steps:[{id:'step',order:1,title:'Annotate the screenshot',instruction:'Use synthetic content.',notes:'',assetId:'image',annotations:[],needsReview:true,crop:null}]};
+  if(stepCount>1){guide.assets.push({id:'portrait',relativePath:'assets/portrait.png',mimeType:'image/png',width:800,height:1600,sha256:'0'.repeat(64)});const base=guide.steps[0];guide.steps=Array.from({length:stepCount},(_,i)=>({...base,id:'step-'+i,order:i+1,title:'Action '+(i+1),assetId:i%2?'portrait':'image',annotations:[]}));}
   let preferences:any={hotkey:'R',screenshotHotkey:'S',exclusions:['keepass']};
   (window as any).__hostEvent=(data:any)=>listeners.forEach(fn=>fn({data}));
   (window as any).__guide=guide;(window as any).__imageMissing=missing;(window as any).__commands=[];(window as any).__copies=[];
@@ -35,7 +36,7 @@ async function host(page:Page,missing=false){
      (window as any).__guide=guide;result={guide,warning:(window as any).__failCleanup?'Finish privacy cleanup before exporting.':undefined};
     }
    }
-   if(m.type==='asset.read'){if((window as any).__imageMissing)error='This screenshot file is missing.';else result={url:'data:image/png;base64,'+png,width:1600,height:800};}
+   if(m.type==='asset.read'){if((window as any).__imageMissing)error='This screenshot file is missing.';else {const a=guide.assets.find((a:any)=>a.id===m.payload.assetId);result={url:'data:image/png;base64,'+(a.width===800?portrait:png),width:a.width,height:a.height};}}
    if(m.type==='clipboard.copy'){if((window as any).__failCopy)error='The Windows clipboard is busy. Try copying again.';else{(window as any).__copies.push({format:m.payload.format,title:guide.steps[0].title,fields:guide.steps[0].titleFields||[]});result={copied:true};}}
    if(m.type==='asset.import'){if((window as any).__failImport)error='This image could not be decoded.';else if((window as any).__cancelImport)result=null;else{result={...guide.assets[0],id:crypto.randomUUID()};guide={...guide,assets:[...guide.assets,result]};}}
    if(m.type==='project.save' && JSON.stringify(m.payload.assets)!==JSON.stringify(guide.assets))error='Project or asset identity changed.';
@@ -44,7 +45,7 @@ async function host(page:Page,missing=false){
    if(m.type==='asset.applyPixelEdits'){guide={...guide,assets:guide.assets.map((a:any)=>({...a,id:'sanitized',sha256:'1'.repeat(64)})),steps:guide.steps.map((s:any)=>({...s,assetId:'sanitized',annotations:s.annotations.filter((a:any)=>!['blur','redact'].includes(a.kind))}))};(window as any).__guide=guide;result={guide};}
    setTimeout(()=>listeners.forEach(fn=>fn({data:{requestId:m.requestId,ok:!error,result,error}})),0);
   }}};
- },{png,missing});await page.goto('/');
+ },{png,missing,stepCount,portrait:readFileSync(resolve(process.cwd(),'../../tests/fixtures/portrait.png')).toString('base64')});await page.goto('/');
 }
 async function draw(page:Page,tool:string,start={x:.15,y:.15},end={x:.4,y:.4}){
  await page.getByRole('button',{name:tool,exact:true}).click();const canvas=page.getByRole('img',{name:'Screenshot annotation canvas'});await canvas.scrollIntoViewIfNeeded();const b=(await canvas.boundingBox())!;
@@ -86,7 +87,7 @@ test('cut removes horizontal and vertical strips, joins the image and supports u
 test('bold fields and both clipboard buttons save first without opening a file dialog',async({page})=>{
  await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();
  const title=page.getByLabel('Step title',{exact:true});await title.fill('Select Save draft');await title.press('End');for(let i=0;i<10;i++)await title.press('Shift+ArrowLeft');
- await page.getByRole('button',{name:'Bold field',exact:true}).click();await expect(page.locator('.title-preview strong')).toHaveText('Save draft');
+ await page.getByRole('button',{name:'Bold field',exact:true}).click();await page.locator('.formatted-preview summary').click();await expect(page.locator('.title-preview strong')).toHaveText('Save draft');
  await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'Copy HTML code',exact:true}).click();await expect(page.locator('.save-status')).toHaveText('HTML code copied');
  await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'Copy steps for Word',exact:true}).click();await expect(page.locator('.save-status')).toHaveText('Word steps copied — paste into Word');
  expect(await page.evaluate(()=>(window as any).__copies)).toEqual(['html','word'].map(format=>({format,title:'Select Save draft',fields:['Save draft']})));
@@ -165,7 +166,7 @@ test('screenshots attach to a selected step, create a new step and retain undo',
  await expect(page.locator('aside li')).toHaveCount(2);
 });
 test('bulk apply handles multiple images and shared steps before continuing export',async({page})=>{
- await host(page);await page.getByRole('button',{name:'Duplicate',exact:true}).click();
+ await host(page);await page.getByRole('button',{name:'Duplicate step 1',exact:true}).click();
  await draw(page,'Blur');
  await page.getByRole('button',{name:'+ Add image step',exact:true}).click();
  await draw(page,'Redact');
@@ -221,4 +222,71 @@ test('separate screenshot shortcut settings and persistent light/dark appearance
  expect(await page.evaluate(()=>(window as any).__preferences.screenshotHotkey)).toBe('P');
  await expect(page.getByRole('button',{name:/^Capture screenshot Ctrl/})).toHaveAttribute('title','Ctrl + Shift + P');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+async function assertFits(page:Page){
+ await expect.poll(()=>page.evaluate(()=>{
+  const stage=document.querySelector('.image-stage')!,image=stage.querySelector('svg')!;const s=stage.getBoundingClientRect(),r=image.getBoundingClientRect();
+  return r.width>10&&r.height>10&&r.left>=s.left-1&&r.right<=s.right+1&&r.top>=s.top-1&&r.bottom<=s.bottom+1&&stage.scrollHeight<=stage.clientHeight+1&&stage.scrollWidth<=stage.clientWidth+1&&s.bottom<=innerHeight+1&&document.documentElement.scrollHeight<=innerHeight+1;
+ })).toBe(true);
+}
+test('Fit image contains wide and portrait screenshots with 21 steps at desktop and minimum window sizes',async({page})=>{
+ await page.setViewportSize({width:1920,height:1057});await host(page,false,21);
+ for(const size of [{width:1920,height:1057},{width:1366,height:768},{width:1400,height:920},{width:800,height:600}]){
+  await page.setViewportSize(size);
+  if(await page.getByRole('button',{name:'Step details',exact:true}).getAttribute('aria-expanded')==='true')await page.getByRole('button',{name:'Close step details',exact:true}).click();
+  for(const index of [0,1,20]){
+   await page.locator('aside li .step-select').nth(index).click();await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await assertFits(page);
+  }
+  const sidebar=await page.locator('.step-sidebar').boundingBox();expect(sidebar!.y+sidebar!.height).toBeLessThanOrEqual(size.height+1);
+ }
+});
+test('zoom preference survives step changes and reload, while crop and tool changes recalculate Fit',async({page})=>{
+ await page.setViewportSize({width:1400,height:920});await host(page,false,21);
+ await page.getByLabel('Screenshot zoom',{exact:true}).selectOption('0.5');
+ await page.locator('aside li .step-select').nth(1).click();await expect(page.getByLabel('Screenshot zoom',{exact:true})).toHaveValue('0.5');
+ await expect.poll(()=>page.getByRole('img',{name:'Screenshot annotation canvas'}).evaluate(e=>Math.round(e.getBoundingClientRect().width))).toBe(400);
+ await page.reload();await expect(page.getByLabel('Screenshot zoom',{exact:true})).toHaveValue('0.5');
+ await page.getByLabel('Screenshot zoom',{exact:true}).selectOption('fit');await assertFits(page);
+ await draw(page,'Crop',{x:.1,y:.1},{x:.7,y:.65});await page.getByRole('button',{name:'Apply crop',exact:true}).click();await assertFits(page);
+ await page.getByRole('button',{name:'Reset crop',exact:true}).click();await assertFits(page);
+ await page.getByRole('button',{name:'Zoom in',exact:true}).click();await expect(page.getByLabel('Screenshot zoom',{exact:true})).not.toHaveValue('fit');
+ const g=await saved(page);expect(g.steps[0].crop).toBeNull();expect(g).not.toHaveProperty('zoom');expect(g.steps[0]).not.toHaveProperty('zoom');
+});
+test('sidebar drag, keyboard reorder, duplicate and delete preserve selection, order and undo',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});await host(page,false,6);
+ await page.locator('aside li .step-select').nth(1).click();
+ await page.getByRole('button',{name:'Reorder step 1',exact:true}).dragTo(page.locator('aside li').nth(3),{targetPosition:{x:80,y:45}});
+ let g=await saved(page);expect(g.steps.map((s:any)=>s.title)).toEqual(['Action 2','Action 3','Action 4','Action 1','Action 5','Action 6']);
+ await expect(page.getByLabel('Step title',{exact:true})).toHaveValue('Action 2');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.getByLabel('Step title',{exact:true})).toHaveValue('Action 2');
+ await page.locator('aside li .step-select').nth(1).focus();await page.keyboard.press('Alt+ArrowDown');
+ g=await saved(page);expect(g.steps[2].title).toBe('Action 2');await expect(page.locator('aside [aria-current=step]')).toContainText('Action 2');
+ await page.locator('aside li .step-select').nth(2).focus();await page.keyboard.press('Control+d');await expect(page.locator('aside li')).toHaveCount(7);
+ await page.keyboard.press('Delete');await expect(page.locator('aside li')).toHaveCount(6);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('aside li')).toHaveCount(7);await expect(page.locator('aside [aria-current=step]')).toContainText('Action 2');
+ g=await saved(page);expect(g.steps.map((s:any)=>s.order)).toEqual([1,2,3,4,5,6,7]);
+ await page.getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:/Synthetic screenshot workflow/}).click();await expect(page.locator('aside li')).toHaveCount(7);
+});
+test('Delete in text or on an annotation never deletes a step, and zoomed canvas supports panning',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});await host(page,false,3);
+ await page.getByLabel('Step title',{exact:true}).focus();await page.keyboard.press('Delete');await expect(page.locator('aside li')).toHaveCount(3);
+ await draw(page,'Rectangle');const image=page.getByRole('img',{name:'Screenshot annotation canvas'});await image.focus();await page.keyboard.press('Delete');
+ await expect(page.locator('[data-kind=rectangle]')).toHaveCount(0);await expect(page.locator('aside li')).toHaveCount(3);
+ await page.getByLabel('Screenshot zoom',{exact:true}).selectOption('2');
+ const stage=page.locator('.image-stage');const b=(await stage.boundingBox())!;
+ await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down({button:'middle'});await page.mouse.move(b.x+b.width/2-80,b.y+b.height/2-60,{steps:5});await page.mouse.up({button:'middle'});
+ expect(await stage.evaluate(e=>e.scrollLeft)).toBeGreaterThan(0);expect(await stage.evaluate(e=>e.scrollTop)).toBeGreaterThan(0);
+});
+
+test.describe('scaled display geometry',()=>{
+ test.use({viewport:{width:1280,height:720},deviceScaleFactor:1.5});
+ test('Fit and annotation coordinates remain correct with scaled pixels',async({page})=>{
+  await host(page,false,3);await page.locator('aside li .step-select').nth(1).click();await assertFits(page);
+  await page.getByLabel('Screenshot zoom',{exact:true}).selectOption('width');
+  await expect.poll(()=>page.locator('.image-stage').evaluate(e=>e.scrollHeight>e.clientHeight)).toBe(true);
+  await page.getByLabel('Screenshot zoom',{exact:true}).selectOption('fit');await assertFits(page);
+  await draw(page,'Rectangle',{x:.2,y:.2},{x:.6,y:.5});
+  const a=(await saved(page)).steps[1].annotations[0];expect(a.x).toBeCloseTo(.2,1);expect(a.y).toBeCloseTo(.2,1);expect(a.width).toBeCloseTo(.4,1);expect(a.height).toBeCloseTo(.3,1);
+ });
 });

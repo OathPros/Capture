@@ -1,0 +1,50 @@
+/* The application owns its viewport. Only the step list, details and zoomed canvas scroll. */
+html,body,#root{height:100%;overflow:hidden}
+.app-shell{height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.app-shell>.app-header{height:auto;min-height:56px;padding:6px 16px;gap:18px;flex:none;flex-wrap:wrap}
+.brand{gap:8px;flex:none}.brand strong{font-size:20px}.brand-mark{width:32px;height:32px}
+.app-header .app-nav{padding:0;border:0;background:transparent;flex:1;gap:10px;min-width:0;flex-wrap:nowrap}
+.app-nav .nav-group{gap:4px;flex:none}.app-nav button{padding:7px 9px;font-size:12px}.app-nav kbd{font-size:9px;margin-left:4px}
+.header-actions{gap:2px;flex:none}.header-actions button{font-size:11px;padding:7px}.save-status{font-size:10px;min-width:0;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.page-content{flex:1;min-height:0;overflow:auto}.page-content.editing-page{display:flex;flex-direction:column;overflow:hidden}
+.document-header{padding:8px 18px;gap:16px;flex:none;min-height:60px}.document-identity input{font-size:19px}.document-identity .eyebrow{font-size:9px}.document-actions button,.export-menu>summary{font-size:12px;padding:7px 10px}
+.app-shell>.error{flex:none;max-height:20vh;overflow:auto}.pixel-batch{padding:8px 16px;gap:12px;flex:none}.pixel-batch p{font-size:11px}.pixel-batch button{font-size:11px}.pixel-batch strong{font-size:12px}
+.workspace{flex:1;min-height:0;position:relative;display:grid;grid-template-columns:260px minmax(0,1fr);overflow:hidden}
+.workspace.details-open{grid-template-columns:260px minmax(0,1fr) 280px}
+.workspace>.step-sidebar{position:static;min-height:0;max-height:none;padding:12px 8px 0;display:flex;flex-direction:column;overflow:hidden;align-self:stretch}
+.steps-heading{padding:0 8px 10px;flex:none}.step-add{display:flex;gap:5px;padding:0 4px 10px;flex:none}.step-add button{flex:1;font-size:10px;padding:6px 4px;white-space:nowrap}
+.step-sidebar ol{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;margin:0;padding:2px 2px 12px;scrollbar-gutter:stable}
+.step-sidebar li{position:relative;display:flex;align-items:center;gap:0;margin:3px 0;padding:3px 1px;min-height:48px;border:1px solid transparent;border-radius:8px}
+.step-sidebar li.selected{background:var(--selected);border-color:var(--accent)}
+.step-sidebar li button{padding:4px;border-radius:5px;background:transparent;border-color:transparent;color:var(--muted);font-size:11px}
+.step-sidebar .step-drag{width:17px;flex:none;cursor:grab;font-size:17px;touch-action:none;opacity:.5}
+.step-sidebar .step-select{display:flex;align-items:start;gap:4px;min-width:0;flex:1;width:auto;text-align:left;line-height:1.5;padding:6px 2px}
+.step-sidebar .step-select[aria-current=step]{background:transparent;color:var(--text);border-color:transparent}
+.step-number{flex:none;opacity:.7}.step-name{overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.review-dot{width:5px;height:5px;margin-top:5px;flex:none;border-radius:50%;background:#d7a75e}
+.step-row-actions{display:flex;gap:1px;flex:none;opacity:0;pointer-events:none}.step-row-actions button{width:23px;height:27px;display:grid;place-items:center}
+.step-row-actions svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.step-sidebar li:hover .step-row-actions,.step-sidebar li:focus-within .step-row-actions,.step-sidebar li.selected .step-row-actions{opacity:1;pointer-events:auto}
+.step-sidebar li button:hover{color:var(--text);background:var(--raised)}.step-row-actions button:last-child:hover{color:var(--error-text)}
+.step-sidebar li.drop-before:before,.step-sidebar li.drop-after:after{content:'';position:absolute;left:0;right:0;height:3px;background:var(--focus);z-index:2}.drop-before:before{top:-3px}.drop-after:after{bottom:-3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.workspace>.editor{min-height:0;min-width:0;padding:10px 12px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.editor-kicker{margin:0;min-height:25px;flex:none}.editor-kicker>div{display:flex;gap:10px;align-items:center}.editor-kicker button{font-size:11px;padding:4px 8px}.editor-kicker .eyebrow{font-size:9px}
+.step-heading{display:flex;align-items:end;gap:10px;flex:none}.step-heading .step-title-field{flex:1;min-width:80px;font-size:10px}.step-title-field input{margin:3px 0 0;padding:7px 9px;font-size:17px}
+.image-source-actions{display:flex;gap:4px;align-items:center;margin:0;padding-bottom:1px;flex:none}.image-source-actions button,.image-source-actions .primary{padding:7px 9px;font-size:11px}.image-source-actions button:last-child[aria-label='Remove image']{font-size:18px;padding:3px 7px}
+.title-format{margin:0;min-height:23px;flex:none;font-size:10px}.title-format button{font-size:10px;padding:3px 6px}.formatted-preview{position:relative}.formatted-preview summary{background:transparent;color:var(--muted);font-size:10px}.formatted-preview .title-preview{position:absolute;z-index:12;min-width:240px;max-width:400px;margin:4px 0 0;padding:14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);font-size:16px}
+.editor>.image-editor{position:relative;flex:1;min-height:0;margin:0;display:flex;flex-direction:column;box-shadow:none;border-radius:9px;overflow:hidden}
+.image-editor-heading{padding:7px 10px;gap:10px;flex:none;font-size:11px}.image-editor-heading>span{font-size:10px}.zoom-controls{display:flex;align-items:center;gap:5px}.zoom-controls label{display:flex;align-items:center;gap:5px;font-size:10px}.zoom-controls button{padding:2px 7px;font-size:16px}.zoom-controls select{padding:4px;font-size:11px;max-width:100px}.zoom-percent{font-size:10px;color:var(--muted);width:32px;text-align:right}
+.image-tools{padding:4px;gap:1px;flex:none}.image-tools button{padding:5px;font-size:10px;gap:3px}.image-tools button>span{font-size:14px}.tool-properties{padding:6px 9px;gap:8px;flex:none}.tool-properties label{font-size:9px}.tool-properties input{height:24px;width:44px}.tool-properties input[type=range]{width:65px}
+.image-actions{padding:4px 8px;gap:3px;flex:none}.image-actions button{font-size:10px;padding:3px 6px}.tool-hint{font-size:10px;margin:1px 9px 5px;flex:none}.cut-direction{padding:5px 9px;flex:none}.annotation-text{padding:5px 9px;max-height:100px;overflow:auto;flex:none}.annotation-text textarea{min-height:36px;margin:4px 0;font-size:12px}
+.image-editor>.image-stage{flex:1;min-height:0;max-height:none;padding:0;overflow:auto;overscroll-behavior:contain;position:relative}
+.image-surface{display:grid;place-items:center;padding:16px;box-sizing:border-box}
+.image-surface>svg{display:block;flex:none;max-width:none;touch-action:none;background:#fff;box-shadow:0 3px 16px #0003;outline-offset:2px}
+.image-surface>svg:focus-visible{outline:2px solid var(--focus)}
+.image-editor>.image-loading,.image-editor>.image-error{min-height:0;flex:1}.annotation-geometry{flex:none;padding:5px 9px;max-height:130px;overflow:auto;background:var(--surface)}.annotation-geometry>div{gap:8px;margin-top:5px}.annotation-geometry input{padding:5px;margin:3px 0}
+.step-details{min-height:0;overflow:auto;border-left:1px solid var(--border);padding:12px 14px;background:var(--surface);overscroll-behavior:contain}.details-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.details-heading h2{font-size:13px;margin:0}.details-heading button{padding:2px 7px;font-size:18px}.step-details label{font-size:11px}.step-details textarea{font-size:12px;min-height:110px}.step-details .check{font-size:11px;align-items:start}.step-details .guide-introduction{border-top:1px solid var(--border);border-bottom:0;padding-top:15px;margin-top:18px}
+.text-step-empty{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;color:var(--muted);padding:20px;background:var(--subtle);border:1px dashed var(--border);border-radius:9px}.text-step-empty h2{color:var(--text)}
+.projects,.settings{margin:30px auto}.settings{padding-bottom:24px}
+@media(max-width:1199px){.app-header .save-status{display:none}.workspace,.workspace.details-open{grid-template-columns:230px minmax(0,1fr)}.step-details{position:absolute;z-index:15;right:0;top:0;bottom:0;width:280px;box-shadow:var(--shadow)}.app-header .app-nav{flex-wrap:wrap}.app-nav .capture-actions{margin-left:auto}.app-header .brand strong{font-size:18px}.app-header .brand-mark{width:28px;height:28px}}
+@media(max-width:950px){.app-shell>.app-header{gap:4px 12px;padding:5px 12px}.app-header .app-nav{order:3;flex-basis:100%;justify-content:space-between}.header-actions{margin-left:auto}.app-nav .capture-actions{margin-left:0}.app-nav kbd{display:none}.app-nav button{font-size:11px;padding:5px 7px}.document-header{flex-direction:row;align-items:center;padding:7px 12px;gap:8px}.document-identity input{font-size:16px}.document-actions{gap:2px}.undo-group{margin:0;gap:0}.undo-group button{padding:5px}.document-actions>button{padding:5px}.export-menu>summary{padding:6px 9px}.export-menu>summary span{margin-left:5px}.export-options{left:auto;right:0}.workspace,.workspace.details-open{grid-template-columns:205px minmax(0,1fr)}.workspace>.editor{padding:8px}.image-editor-heading{gap:5px;padding:5px 7px}.image-editor-heading>span{display:none}.image-editor-heading>strong{font-size:10px}.zoom-controls{margin-left:auto;gap:3px}.zoom-controls label{font-size:0}.zoom-controls select{font-size:10px}.image-source-actions button{font-size:10px;padding:6px}.step-heading{gap:5px}.step-title-field input{font-size:15px}.image-tools button{font-size:9px;padding:4px}.tool-hint{display:none}}
+@media(max-height:700px){.image-tools button{padding:4px}.image-actions{padding:3px 6px}.tool-hint{display:none}.tool-properties{padding:4px 7px}.editor-kicker{min-height:21px}.workspace>.editor{gap:5px}}

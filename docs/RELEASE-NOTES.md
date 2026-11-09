@@ -1,3 +1,14 @@
+# YU Capture 0.6.0-preview.1 — Fit images and faster step editing
+
+- **Real Fit image:** contains the complete screenshot within both canvas dimensions, including portrait, cropped and cut images. Fit width is a separate option. View resizing and contextual tools automatically recalculate Fit.
+- **Shared zoom:** Fit/manual percentages persist across steps and app restarts. +/− controls show actual scale; Space-drag/middle-drag pans zoomed images. Canvas keyboard shortcuts: +/− zoom, 0 fits. Viewing scale never changes export pixels.
+- **Canvas-first workspace:** compact headers, bounded canvas, contextual shape settings and collapsible Step details. No outer-page scrolling while editing. Instructions/notes no longer push the screenshot below the window.
+- **Sidebar actions:** duplicate/delete icons, drag-to-reorder, keyboard selection and Alt+Up/Down reordering. Ctrl+D duplicates and Delete removes the focused sidebar step. Undo/Redo restores selection and ordering; text/annotation Delete remains scoped to its editor.
+- Native WebView2 page zoom is disabled so it cannot conflict with screenshot zoom. Windows display scaling remains available.
+- No project schema change; existing guides, capture, privacy application and exports remain compatible. Interactive Windows scaling and pointer behavior still require manual validation.
+
+---
+
 # YU Capture 0.5.0-preview.2 — Custom Windows icon
 
 - Uses the supplied Capture icon in the executable, taskbar, window, system tray, recording toolbar, installer and shortcuts.
