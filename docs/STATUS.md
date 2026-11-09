@@ -5,6 +5,8 @@
 - Sidebar duplicate/delete icons, native handle drag/drop with auto-scroll and insertion feedback, keyboard selection, Alt+Up/Down reorder, Ctrl+D duplicate and scoped Delete. History snapshots retain step IDs so undo/redo restores selection; reorder preserves the selected step and normalizes order values.
 - Local TypeScript/Vite and .NET Release solution builds pass with zero warnings/errors. All 12 editor unit and 22 browser tests pass, including fit, persistence, portrait/crop, minimum window, drag/keyboard/undo, panning and scaled-pixel geometry. Dark/light workspace screenshots were inspected. Windows CI/release checks are pending before publication; actual interactive Windows DPI still needs manual verification.
 
+- Final Windows validation initially hit a test-only race when the scaled-screen measurement ran before its next canvas loaded. The fit assertion now waits through loading; five repeated local runs pass. Final Windows rerun is pending.
+
 ---
 
 # Current version — 0.5.0-preview.2

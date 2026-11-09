@@ -226,7 +226,7 @@ test('separate screenshot shortcut settings and persistent light/dark appearance
 
 async function assertFits(page:Page){
  await expect.poll(()=>page.evaluate(()=>{
-  const stage=document.querySelector('.image-stage')!,image=stage.querySelector('svg')!;const s=stage.getBoundingClientRect(),r=image.getBoundingClientRect();
+  const stage=document.querySelector('.image-stage'),image=stage?.querySelector('svg');if(!stage||!image)return false;const s=stage.getBoundingClientRect(),r=image.getBoundingClientRect();
   return r.width>10&&r.height>10&&r.left>=s.left-1&&r.right<=s.right+1&&r.top>=s.top-1&&r.bottom<=s.bottom+1&&stage.scrollHeight<=stage.clientHeight+1&&stage.scrollWidth<=stage.clientWidth+1&&s.bottom<=innerHeight+1&&document.documentElement.scrollHeight<=innerHeight+1;
  })).toBe(true);
 }
