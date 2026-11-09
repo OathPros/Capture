@@ -1,8 +1,8 @@
-name: Publish download page
+name: Publish download pages
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'text2speech/**', '.github/workflows/pages.yml']
+    paths: ['index.html', 'capture/**', 'text2speech/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,10 +22,11 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Prepare download pages
+      - name: Prepare app pages
         run: |
-          mkdir -p page/text2speech
+          mkdir -p page/capture page/text2speech
           cp index.html page/index.html
+          cp -R capture/. page/capture/
           cp -R text2speech/. page/text2speech/
           touch page/.nojekyll
       - uses: actions/upload-pages-artifact@v3
