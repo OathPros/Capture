@@ -290,3 +290,10 @@ test.describe('scaled display geometry',()=>{
   const a=(await saved(page)).steps[1].annotations[0];expect(a.x).toBeCloseTo(.2,1);expect(a.y).toBeCloseTo(.2,1);expect(a.width).toBeCloseTo(.4,1);expect(a.height).toBeCloseTo(.3,1);
  });
 });
+test('export menu remains usable above the narrow details drawer',async({page})=>{
+ await page.setViewportSize({width:800,height:600});await host(page);
+ await page.getByRole('button',{name:'Step details',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Step details',exact:true})).toBeVisible();
+ await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'Copy HTML code',exact:true}).click();
+ await expect(page.locator('.save-status')).toHaveText('HTML code copied');
+});
