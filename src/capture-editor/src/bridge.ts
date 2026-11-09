@@ -1,19 +1,22 @@
-interface Reply { requestId?: string; ok: boolean; result?: unknown; error?: string; type?: string; guide?: unknown }
+interface Reply { requestId?: string; ok: boolean; result?: unknown; error?: string; type?: string; guide?: unknown; stepId?: string }
 interface WebView { postMessage(message: unknown): void; addEventListener(type: 'message', listener: (event: MessageEvent<Reply>) => void): void }
 declare global { interface Window { chrome?: { webview?: WebView } } }
 const pending = new Map<string, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
-let flushHandler: (() => Promise<void>) | null = null;
-export function onFlush(fn: () => Promise<void>) { flushHandler = fn; }
-const listeners = new Set<(guide: unknown) => void>();
+let flushHandler: (() => Promise<{projectId?:string;stepId?:string}>) | null = null;
+export function onFlush(fn: () => Promise<{projectId?:string;stepId?:string}>) { flushHandler = fn; }
+const errors=new Set<(message:string)=>void>();
+export function onHostError(fn:(message:string)=>void){errors.add(fn);return ()=>{errors.delete(fn);};}
+const listeners = new Set<(guide: unknown, stepId?:string) => void>();
 window.chrome?.webview?.addEventListener('message', ({ data }) => {
- if (data.type === 'editor.flush') { void (async () => { try { await flushHandler?.(); await request('app.flushComplete', { saved: true }); } catch { await request('app.flushComplete', { saved: false }); } })(); return; }
- if (data.type === 'project.changed') { listeners.forEach(fn => fn(data.guide)); return; }
+ if (data.type === 'app.error') { errors.forEach(fn=>fn(data.error||'The operation failed.')); return; }
+ if (data.type === 'editor.flush') { void (async () => { try { const selection=await flushHandler?.(); await request('app.flushComplete', { saved: true, ...selection }); } catch { await request('app.flushComplete', { saved: false }); } })(); return; }
+ if (data.type === 'project.changed') { listeners.forEach(fn => fn(data.guide,data.stepId)); return; }
  if (!data.requestId) return;
  const pendingRequest = pending.get(data.requestId); if (!pendingRequest) return;
  clearTimeout(pendingRequest.timer); pending.delete(data.requestId);
  if (data.ok) pendingRequest.resolve(data.result); else pendingRequest.reject(new Error(data.error || 'The operation failed.'));
 });
-export function onProjectChanged(fn: (guide: unknown) => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
+export function onProjectChanged(fn: (guide: unknown, stepId?:string) => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }
 export function request<T>(type: string, payload: unknown = {}): Promise<T> {
  return new Promise((resolve, reject) => {
   const webview = window.chrome?.webview;

@@ -49,6 +49,45 @@ public sealed class ImageMarkupTests : IDisposable
         Assert.False(File.Exists(System.IO.Path.Combine(store.DirectoryFor(guide.Id),"assets/image.png")));Assert.Single(final.Assets);Assert.All(final.Steps,s=>Assert.Equal(final.Assets[0].Id,s.AssetId));
         var bundle=System.IO.Path.Combine(root,"sanitized.capture");await store.ExportPortableAsync(final,bundle);using var zip=ZipFile.OpenRead(bundle);Assert.Equal(2,zip.Entries.Count);using var bytes=zip.GetEntry(final.Assets[0].RelativePath)!.Open();using var image=new Bitmap(bytes);Assert.Equal(Color.Black.ToArgb(),image.GetPixel(100,60).ToArgb());Assert.Equal(Color.Black.ToArgb(),image.GetPixel(430,60).ToArgb());
     }
+    [Fact] public async Task BulkEditsSanitizeEveryImageAndAllSharedStepsTogether()
+    {
+        var guide = await Fixture();
+        var secondPath = System.IO.Path.Combine(store.DirectoryFor(guide.Id), "assets/second.png");
+        File.Copy(System.IO.Path.Combine(store.DirectoryFor(guide.Id), "assets/image.png"), secondPath);
+        guide.Assets.Add(guide.Assets[0] with { Id = "second", RelativePath = "assets/second.png" });
+        guide.Steps[0].Annotations = [new("redact1", "redact", .1,.1,.2,.2)];
+        guide.Steps.Add(new() { AssetId = "image", Annotations = [new("redact2", "redact", .6,.1,.2,.2)] });
+        guide.Steps.Add(new() { AssetId = "second", Annotations = [new("blur", "blur", .2,.2,.3,.3)] });
+        await store.SaveAsync(guide);
+        var applied = await PixelEditStorage.ApplyAllAsync(guide, store);
+        Assert.Equal(2, applied.PendingAssetDeletes.Count);
+        Assert.All(applied.Steps, step => Assert.Empty(step.Annotations));
+        Assert.Equal(applied.Steps[0].AssetId, applied.Steps[1].AssetId);
+        Assert.True(File.Exists(secondPath));
+        Assert.Throws<InvalidDataException>(() => GuideJson.EnsurePrivacyApplied(applied));
+        var final = await PixelEditStorage.CleanupAsync(applied, store);
+        GuideJson.EnsurePrivacyApplied(final);
+        Assert.False(File.Exists(secondPath));
+        Assert.Equal(2, final.Assets.Count);
+        using var image = Decode(await ExportImageRenderer.ReadSourceAsync(final, final.Steps[0].AssetId!, store.DirectoryFor(final.Id)));
+        Assert.Equal(Color.Black.ToArgb(), image.GetPixel(100,60).ToArgb());
+        Assert.Equal(Color.Black.ToArgb(), image.GetPixel(430,60).ToArgb());
+    }
+    [Fact] public async Task BulkRenderFailureRollsBackAllNewImagesAndPreservesSavedMetadata()
+    {
+        var guide = await Fixture();
+        var dir = store.DirectoryFor(guide.Id);
+        File.Copy(System.IO.Path.Combine(dir, "assets/image.png"), System.IO.Path.Combine(dir, "assets/second.png"));
+        guide.Assets.Add(guide.Assets[0] with { Id = "second", RelativePath = "assets/second.png", Sha256 = new string('0',64) });
+        guide.Steps[0].Annotations = [new("redact1", "redact", .1,.1,.2,.2)];
+        guide.Steps.Add(new() { AssetId = "second", Annotations = [new("redact2", "redact", .1,.1,.2,.2)] });
+        await store.SaveAsync(guide);
+        var before = await File.ReadAllTextAsync(System.IO.Path.Combine(dir, "guide.json"));
+        await Assert.ThrowsAsync<InvalidDataException>(() => PixelEditStorage.ApplyAllAsync(guide, store));
+        Assert.Equal(before, await File.ReadAllTextAsync(System.IO.Path.Combine(dir, "guide.json")));
+        Assert.Equal(2, Directory.GetFiles(System.IO.Path.Combine(dir, "assets")).Length);
+        Assert.Empty(guide.PendingAssetDeletes);
+    }
     [Fact] public async Task FailedSaveRetainsOriginal()
     {
         var guide=await Fixture();guide.Steps[0].Annotations=[new("a","redact",.1,.1,.3,.3)];var dir=store.DirectoryFor(guide.Id);var file=System.IO.Path.Combine(dir,"assets/image.png");var original=await File.ReadAllBytesAsync(file);Directory.CreateDirectory(System.IO.Path.Combine(dir,"guide.json.tmp"));

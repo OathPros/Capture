@@ -19,16 +19,19 @@ public partial class MainWindow : Window
     private Guide? current;
     private Window? toolbar;
     private TextBlock? recordingText;
-    private bool exiting, initialized, busy, hotkeyRegistered, recordingBlocked, exporting;
+    private bool exiting, initialized, busy, hotkeyRegistered, screenshotHotkeyRegistered, recordingBlocked, exporting, capturing, startupFailed;
     private TaskCompletionSource? flushCompletion;
-    private uint hotkey = 0x52;
+    private uint hotkey = 0x52, screenshotHotkey = 0x53;
+    private Guid? editorStepId, editorProjectId;
+    private readonly List<string> startupIssues = [];
+    private bool darkTheme = true;
     private string[] exclusions = ["1password", "keepass", "bitwarden", "lastpass", "credential", "lockapp", "logonui"];
     private readonly string settingsFile = ScreenshotSmoke.Enabled ? Path.Combine(ScreenshotSmoke.Root,"settings.json") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Capture","settings.json");
     public MainWindow()
     {
         InitializeComponent();
         Loaded += async (_,_) => await InitializeAsync();
-        Closing += (_,e) => { if (!exiting) { e.Cancel = true; Hide(); tray.ShowBalloonTip(2000,"CAPTURE","Capture is still available in the system tray. Use Exit to close it.",System.Windows.Forms.ToolTipIcon.Info); } };
+        Closing += (_,e) => { if (startupFailed) { exiting = true; System.Windows.Application.Current.Shutdown(1); return; } if (!exiting) { e.Cancel = true; Hide(); } };
         SourceInitialized += (_,_) => HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WindowMessage);
     }
     private async Task InitializeAsync()
@@ -39,17 +42,24 @@ public partial class MainWindow : Window
             if(ScreenshotSmoke.Enabled) current=await ScreenshotSmoke.CreateAsync(store);
             if (File.Exists(settingsFile))
             {
-                try { var settings = JsonDocument.Parse(await File.ReadAllTextAsync(settingsFile)); hotkey = settings.RootElement.GetProperty("hotkey").GetUInt32(); exclusions = settings.RootElement.GetProperty("exclusions").Deserialize<string[]>() ?? exclusions; }
-                catch { MessageBox.Show("Preferences could not be read. Default exclusions and hotkey are in use.","CAPTURE"); }
+                try { using var settings = JsonDocument.Parse(await File.ReadAllTextAsync(settingsFile)); hotkey = settings.RootElement.GetProperty("hotkey").GetUInt32(); exclusions = settings.RootElement.GetProperty("exclusions").Deserialize<string[]>() ?? exclusions;
+                    if (settings.RootElement.TryGetProperty("screenshotHotkey", out var screenshotKey)) screenshotHotkey = screenshotKey.GetUInt32();
+                    else screenshotHotkey = hotkey == 0x53 ? 0x50u : 0x53u;
+                    if (hotkey < 'A' || hotkey > 'Z' || screenshotHotkey < 'A' || screenshotHotkey > 'Z' || hotkey == screenshotHotkey) { hotkey = 0x52; screenshotHotkey = 0x53; }
+                    if (exclusions.Length > 100 || exclusions.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 100)) throw new InvalidDataException(); }
+                catch { hotkey = 0x52; screenshotHotkey = 0x53; exclusions = ["1password", "keepass", "bitwarden", "lastpass", "credential", "lockapp", "logonui"]; startupIssues.Add("Preferences could not be read. Open Settings to choose your shortcuts."); }
             }
             tray.Icon = System.Drawing.SystemIcons.Application; tray.Text = "CAPTURE — not recording";
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Open Capture", null, (_,_) => { Show(); Activate(); });
             menu.Items.Add("Start / finish recording", null, async (_,_) => await ToggleAsync());
+            menu.Items.Add("Capture screenshot", null, async (_,_) => await ScreenshotFromHotkeyAsync());
             menu.Items.Add("Exit", null, async (_,_) => await ExitAsync());
             tray.ContextMenuStrip = menu; tray.DoubleClick += (_,_) => { Show(); Activate(); }; tray.Visible = !ScreenshotSmoke.Enabled;
             hotkeyRegistered = ScreenshotSmoke.Enabled || Native.RegisterHotKey(new WindowInteropHelper(this).Handle,1,0x4006,hotkey);
-            if (!hotkeyRegistered) MessageBox.Show("The capture shortcut is already in use. Start recording from Projects, or select another shortcut in Settings.","Shortcut unavailable");
+            screenshotHotkeyRegistered = ScreenshotSmoke.Enabled || Native.RegisterHotKey(new WindowInteropHelper(this).Handle, 3, 0x4006, screenshotHotkey);
+            if (!hotkeyRegistered) startupIssues.Add("Recording shortcut is in use. Choose another in Settings.");
+            if (!screenshotHotkeyRegistered) startupIssues.Add("Screenshot shortcut is in use. Choose another in Settings.");
             var environment = await CoreWebView2Environment.CreateAsync(null,Path.Combine(Path.GetDirectoryName(settingsFile)!,"WebView2"),ScreenshotSmoke.Enabled ? new CoreWebView2EnvironmentOptions("--disable-gpu") : null);
             await Editor.EnsureCoreWebView2Async(environment);
             Editor.CoreWebView2.Settings.AreDevToolsEnabled = false;
@@ -63,10 +73,16 @@ public partial class MainWindow : Window
             Editor.CoreWebView2.WebMessageReceived += HandleMessage;
             Editor.Source = new Uri("https://capture.local/index.html"); initialized = true;
         }
-        catch (Exception ex) { if(ScreenshotSmoke.Enabled) { ScreenshotSmoke.Report("FAIL: "+ex.Message);exiting=true;tray.Dispose();System.Windows.Application.Current.Shutdown(1);return; } MessageBox.Show("Capture could not start. Install Microsoft Edge WebView2 Runtime if it is missing.\n\n"+ex.Message,"CAPTURE startup"); exiting=true; tray.Dispose(); System.Windows.Application.Current.Shutdown(1); }
+        catch (Exception ex) { if(ScreenshotSmoke.Enabled) { ScreenshotSmoke.Report("FAIL: "+ex.Message);exiting=true;tray.Dispose();System.Windows.Application.Current.Shutdown(1);return; } startupFailed = true; tray.Dispose(); Background = System.Windows.Media.Brushes.White; Foreground = System.Windows.Media.Brushes.Black;
+            var panel = new StackPanel { Margin = new Thickness(40) };
+            panel.Children.Add(new TextBlock { Text = "Capture could not start", FontSize = 24 });
+            panel.Children.Add(new TextBlock { Text = "Check Microsoft Edge WebView2 Runtime and try again.\n\n" + ex.Message, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,20,0,20) });
+            var close = new Button { Content = "Close Capture", Padding = new Thickness(16,8,16,8), HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
+            close.Click += (_,_) => { exiting = true; System.Windows.Application.Current.Shutdown(1); }; panel.Children.Add(close); Content = panel; }
     }
     private IntPtr WindowMessage(IntPtr hwnd,int msg,IntPtr w,IntPtr l,ref bool handled)
     {
+        if(msg == 0x312 && w == (IntPtr)3) { handled = true; _ = ScreenshotFromHotkeyAsync(); }
         if(msg == 0x312 && w == (IntPtr)1) { handled = true; _ = ToggleAsync(); }
         return IntPtr.Zero;
     }
@@ -84,15 +100,19 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.4.0-preview.1", guide = current, recording = session.State.ToString() },
-                "settings.get" => new { hotkey = ((char)hotkey).ToString(), exclusions },
+                "editor.ready" => new { version = "0.5.0-preview.1", guide = current, recording = session.State.ToString(), issues = startupIssues },
+                "settings.get" => new { hotkey = ((char)hotkey).ToString(), screenshotHotkey = ((char)screenshotHotkey).ToString(), hotkeyRegistered, screenshotHotkeyRegistered, exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
+                "app.theme" => SetTheme(p.GetProperty("theme").GetString()),
                 "project.list" => await store.ListAsync(),
                 "project.open" => await OpenAsync(p.GetProperty("id").GetGuid()),
                 "project.save" => await SaveAsync(p),
                 "asset.read" => await ReadAssetAsync(p),
+                "asset.import" => await ImportImageAsync(p),
                 "asset.previewReady" => PreviewReady(p),
                 "asset.applyPixelEdits" => await ApplyPixelEditsAsync(p),
+                "asset.applyAllPixelEdits" => await ApplyPixelEditsAsync(p, true),
+                "screenshot.capture" => await CaptureScreenshotAsync(p.TryGetProperty("stepId", out var stepId) ? stepId.GetGuid() : null),
                 "asset.finishCleanup" => await FinishCleanupAsync(),
                 "project.new" => await NewAsync(),
                 "project.import" => await ImportAsync(),
@@ -111,22 +131,38 @@ public partial class MainWindow : Window
     }
     private async Task<object> UpdateSettingsAsync(JsonElement p)
     {
-        if (session.State != SessionState.Idle) throw new InvalidOperationException("Finish recording before changing settings.");
+        RequireIdle();
         var key = p.GetProperty("hotkey").GetString();
-        if (key is null || key.Length != 1 || key[0] < 'A' || key[0] > 'Z') throw new InvalidDataException("Choose a letter A–Z.");
+        var screenshotKey = p.GetProperty("screenshotHotkey").GetString();
+        if (key is null || key.Length != 1 || key[0] < 'A' || key[0] > 'Z' || screenshotKey is null || screenshotKey.Length != 1 || screenshotKey[0] < 'A' || screenshotKey[0] > 'Z')
+            throw new InvalidDataException("Choose a letter A–Z for each shortcut.");
+        if (key == screenshotKey) throw new InvalidDataException("Recording and screenshot shortcuts must be different.");
         var list = p.GetProperty("exclusions").Deserialize<string[]>() ?? [];
-        if (list.Length > 100 || list.Any(s=>string.IsNullOrWhiteSpace(s)||s.Length>100)) throw new InvalidDataException("Invalid exclusion list.");
+        if (list.Length > 100 || list.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 100)) throw new InvalidDataException("Invalid exclusion list.");
         var hwnd = new WindowInteropHelper(this).Handle;
-        // Register the replacement first so a failed change preserves the old shortcut.
-        if ((key[0] != hotkey || !hotkeyRegistered) && !Native.RegisterHotKey(hwnd,2,0x4006,key[0])) throw new InvalidOperationException("That shortcut is in use. Choose another letter.");
-        if (key[0] != hotkey || !hotkeyRegistered) {
-            Native.UnregisterHotKey(hwnd,2); Native.UnregisterHotKey(hwnd,1);
-            if (!Native.RegisterHotKey(hwnd,1,0x4006,key[0])) { Native.RegisterHotKey(hwnd,1,0x4006,hotkey); throw new InvalidOperationException("Shortcut could not be changed."); }
+        Native.UnregisterHotKey(hwnd, 1); Native.UnregisterHotKey(hwnd, 3);
+        var temporary = settingsFile + ".tmp";
+        try
+        {
+            if (!Native.RegisterHotKey(hwnd, 1, 0x4006, key[0])) throw new InvalidOperationException("Recording shortcut is in use. Choose another letter.");
+            if (!Native.RegisterHotKey(hwnd, 3, 0x4006, screenshotKey[0])) throw new InvalidOperationException("Screenshot shortcut is in use. Choose another letter.");
+            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(new { hotkey = (uint)key[0], screenshotHotkey = (uint)screenshotKey[0], exclusions = list }));
+            File.Move(temporary, settingsFile, true);
+            hotkey = key[0]; screenshotHotkey = screenshotKey[0]; exclusions = list;
+            hotkeyRegistered = screenshotHotkeyRegistered = true;
         }
-        hotkeyRegistered = true; hotkey = key[0]; exclusions = list;
-        await File.WriteAllTextAsync(settingsFile,JsonSerializer.Serialize(new { hotkey, exclusions })); return new { saved = true };
+        catch
+        {
+            Native.UnregisterHotKey(hwnd, 1); Native.UnregisterHotKey(hwnd, 3);
+            hotkeyRegistered = Native.RegisterHotKey(hwnd, 1, 0x4006, hotkey);
+            screenshotHotkeyRegistered = Native.RegisterHotKey(hwnd, 3, 0x4006, screenshotHotkey);
+            throw;
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        return new { saved = true };
     }
-    private void RequireIdle() { if (exporting) throw new InvalidOperationException("Wait for the current export to finish."); if (session.State != SessionState.Idle) throw new InvalidOperationException("Finish the recording first."); }
+
+    private void RequireIdle(bool captureSave = false) { if (capturing && !captureSave) throw new InvalidOperationException("Wait for the screenshot to finish."); if (exporting) throw new InvalidOperationException("Wait for the current export to finish."); if (session.State != SessionState.Idle) throw new InvalidOperationException("Finish the recording first."); }
     private Guide Select(Guide g)
     {
         current = g;
@@ -143,7 +179,7 @@ public partial class MainWindow : Window
     }
     private async Task<object> SaveAsync(JsonElement payload)
     {
-        RequireIdle(); if (current is null) throw new InvalidOperationException("Open a project first.");
+        RequireIdle(true); if (current is null) throw new InvalidOperationException("Open a project first.");
         var g = GuideJson.Parse(payload.GetRawText());
         if (g.Id != current.Id || JsonSerializer.Serialize(g.Assets,GuideJson.Options) != JsonSerializer.Serialize(current.Assets,GuideJson.Options) || !g.PendingAssetDeletes.SequenceEqual(current.PendingAssetDeletes)) throw new InvalidDataException("Project or asset identity changed.");
         g.UpdatedAt = DateTimeOffset.UtcNow; await store.SaveAsync(g); current = g; return new { saved = true };
@@ -167,15 +203,30 @@ public partial class MainWindow : Window
         var image=await ExportImageRenderer.ReadSourceAsync(snapshot,assetId,store.DirectoryFor(snapshot.Id));
         return new { url="data:image/png;base64,"+Convert.ToBase64String(image.Png), width=image.Width,height=image.Height };
     }
-    private async Task<object?> ApplyPixelEditsAsync(JsonElement payload)
+    private async Task<object?> ImportImageAsync(JsonElement payload)
+    {
+        RequireIdle();
+        if (current is null || payload.GetProperty("projectId").GetGuid() != current.Id)
+            throw new InvalidDataException("Open this image's project first.");
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Choose a step image", Filter = "Images (PNG, JPEG, BMP)|*.png;*.jpg;*.jpeg;*.bmp", CheckFileExists = true, Multiselect = false };
+        exporting = true;
+        try
+        {
+            if (dialog.ShowDialog(this) != true) return null;
+            var result = await Task.Run(() => ImageImport.ImportAsync(current, dialog.FileName, store));
+            current = result.Guide;
+            return result.Asset;
+        }
+        finally { exporting = false; }
+    }
+    private async Task<object?> ApplyPixelEditsAsync(JsonElement payload, bool all = false)
     {
         RequireIdle();if(current is null) throw new InvalidOperationException("Open a project first.");
-        var assetId=payload.GetProperty("assetId").GetString();if(assetId is null || !current.Assets.Any(a=>a.Id==assetId))throw new InvalidDataException("Unknown screenshot.");
-        if(MessageBox.Show("Permanently apply ALL blur/redaction regions on this screenshot, including steps that share it? The original screenshot will be replaced and Undo history cleared. Existing exports and external backups are not erased. Blur is visual softening; use solid redaction for secrets. This cannot be undone.","Apply pixel edits permanently",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return null;
+        var assetId=all ? null : payload.GetProperty("assetId").GetString();if(!all && (assetId is null || !current.Assets.Any(a=>a.Id==assetId)))throw new InvalidDataException("Unknown screenshot.");
         exporting=true;
         try
         {
-            current=await Task.Run(()=>PixelEditStorage.ApplyAsync(current,assetId,store));
+            current=await Task.Run(()=>all ? PixelEditStorage.ApplyAllAsync(current,store) : PixelEditStorage.ApplyAsync(current,assetId!,store));
             try { current=await PixelEditStorage.CleanupAsync(current,store); return new { guide=current,warning=(string?)null }; }
             catch(Exception ex) when(ex is IOException or UnauthorizedAccessException) { return new { guide=current,warning="The sanitized image is saved, but the original image could not be removed. Finish privacy cleanup before exporting." }; }
         }
@@ -189,14 +240,13 @@ public partial class MainWindow : Window
     private async Task<object> ToggleFromBridgeAsync() { await ToggleAsync(); return new { recording = session.State.ToString() }; }
     private async Task ToggleAsync()
     {
-        if (!initialized || busy || exporting) return;
-        if(recordingBlocked) { MessageBox.Show("Restart Capture before recording again. Saved drafts are available in Projects."); return; }
+        if (!initialized || busy || exporting || capturing) return;
+        if(recordingBlocked) { PostError("Restart Capture before recording again. Saved drafts are available in Projects."); return; }
         busy = true;
         try
         {
             if (session.State == SessionState.Idle)
             {
-                if (MessageBox.Show("Capture will take screenshots of the active monitor and observe mouse clicks until you finish. Screenshots may include sensitive information. Password detection is best effort; pause before opening sensitive content. No keyboard text is collected and nothing is uploaded.\n\nUse synthetic data for this preview. Start recording?","Start recording",MessageBoxButton.OKCancel,MessageBoxImage.Warning) != MessageBoxResult.OK) return;
                 await FlushEditorAsync();
                 session.Start(); recorder = new Recorder(store,exclusions);
                 recorder.Status += text => { if(!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (recordingText is not null) recordingText.Text = text; }); };
@@ -214,33 +264,122 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             recorder?.Dispose(); session.Reset(); toolbar?.Close(); toolbar = null; Show();
-            if (ex is TimeoutException) { recordingBlocked = true; MessageBox.Show(ex.Message,"Recording stopped — restart Capture"); }
-            else { recorder = null; MessageBox.Show("Recording stopped. Saved drafts can be reopened from Projects.\n"+ex.Message,"CAPTURE"); }
+            if (ex is TimeoutException) { recordingBlocked = true; PostError(ex.Message); }
+            else { recorder = null; PostError("Recording stopped. Saved drafts can be reopened from Projects. "+ex.Message); }
         }
         finally { busy = false; }
     }
     private void CreateToolbar()
     {
-        toolbar = new Window { Title = "CAPTURE recording", Width = 560, Height = 125, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowActivated = false, WindowStyle = WindowStyle.ToolWindow };
+        toolbar = new Window { Title = "CAPTURE recording", Width = 610, Height = 125, Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24,27,33)), Foreground = System.Windows.Media.Brushes.White, Topmost = true, ResizeMode = ResizeMode.NoResize, ShowActivated = false, WindowStyle = WindowStyle.ToolWindow };
         var panel = new StackPanel { Margin = new Thickness(12) };
         recordingText = new TextBlock { Text = "● Recording · 0 steps", TextWrapping = TextWrapping.Wrap };
         panel.Children.Add(recordingText); var actions = new StackPanel { Orientation = Orientation.Horizontal };
         var pause = new Button { Content = "Pause", Margin = new Thickness(4), Padding = new Thickness(12,4,12,4) };
-        pause.Click += (_,_) => { if (busy) return; if (session.State == SessionState.Recording) { session.Pause(); recorder!.Pause(true); pause.Content="Resume"; recordingText.Text="Paused — screenshots are off"; } else if(session.State == SessionState.Paused) { session.Resume(); recorder!.Pause(false); pause.Content="Pause"; recordingText.Text="● Recording"; } };
+        pause.Click += (_,_) => { if (busy || exporting) return; if (session.State == SessionState.Recording) { session.Pause(); recorder!.Pause(true); pause.Content="Resume"; recordingText.Text="Paused · Manual screenshots available"; } else if(session.State == SessionState.Paused) { session.Resume(); recorder!.Pause(false); pause.Content="Pause"; recordingText.Text="● Recording"; } };
         var finish = new Button { Content = "Finish", Margin = new Thickness(4), Padding = new Thickness(12,4,12,4) }; finish.Click += async (_,_) => await ToggleAsync();
-        var cancel = new Button { Content = "Cancel", Margin = new Thickness(4), Padding = new Thickness(12,4,12,4) };
+        var cancel = new Button { Content = "Discard", Margin = new Thickness(4), Padding = new Thickness(12,4,12,4) };
         cancel.Click += async (_,_) =>
         {
-            if(busy || MessageBox.Show("Discard this recording and its saved screenshots?","Cancel recording",MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if(busy || exporting || capturing) return;
             busy=true;
             try { await recorder!.FinishAsync(); var dir=store.DirectoryFor(recorder.Guide.Id); recorder.Dispose(); recorder=null; if(Directory.Exists(dir)) Directory.Delete(dir,true); session.Reset(); toolbar.Close(); toolbar=null; Show(); tray.Text="CAPTURE — not recording"; }
-            catch(Exception ex) { recordingBlocked=true; session.Reset(); toolbar?.Close(); toolbar=null; Show(); tray.Text="CAPTURE — restart required"; MessageBox.Show("Could not finish cancellation. Use Exit in the tray, then restart Capture. A saved draft may remain.\n"+ex.Message); }
+            catch(Exception ex) { recordingBlocked=true; session.Reset(); toolbar?.Close(); toolbar=null; Show(); tray.Text="CAPTURE — restart required"; PostError("Could not discard recording. Restart Capture. A saved draft may remain. "+ex.Message); }
             finally { busy=false; }
         };
-        actions.Children.Add(pause); actions.Children.Add(finish); actions.Children.Add(cancel); panel.Children.Add(actions); toolbar.Content=panel;
+        var screenshot = new Button { Content = "Screenshot", ToolTip = $"Ctrl + Shift + {(char)screenshotHotkey}", Margin = new Thickness(4), Padding = new Thickness(12,4,12,4) };
+        screenshot.Click += async (_,_) => await ScreenshotFromHotkeyAsync();
+        foreach (var button in new[] { screenshot, pause, finish, cancel })
+        {
+            button.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(39,44,54));
+            button.Foreground = System.Windows.Media.Brushes.White;
+            button.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(66,73,88));
+            actions.Children.Add(button);
+        } panel.Children.Add(actions); toolbar.Content=panel;
         toolbar.SourceInitialized += (_,_) => { recorder!.MaskWindow = new WindowInteropHelper(toolbar).Handle; if(!Native.SetWindowDisplayAffinity(new WindowInteropHelper(toolbar).Handle,0x11)) recordingText.Text="Toolbar exclusion unavailable; its rectangle will be masked in screenshots."; };
         toolbar.Closing += (_,e) => { if(session.State is SessionState.Recording or SessionState.Paused) e.Cancel=true; };
-        toolbar.Show();
+        toolbar.Show(); SetTheme(darkTheme ? "dark" : "light");
+    }
+    private void PostError(string message)
+    {
+        if (initialized) Editor.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "app.error", error = message }));
+        if (recordingText is not null && session.State is SessionState.Recording or SessionState.Paused) recordingText.Text = message;
+    }
+    private object SetTheme(string? theme)
+    {
+        if (theme is not ("light" or "dark")) throw new InvalidDataException("Choose a light or dark theme.");
+        darkTheme = theme == "dark";
+        var enabled = darkTheme ? 1 : 0;
+        Native.DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, 20, ref enabled, sizeof(int));
+        if (toolbar is not null)
+        {
+            Native.DwmSetWindowAttribute(new WindowInteropHelper(toolbar).Handle, 20, ref enabled, sizeof(int));
+            toolbar.Background = new System.Windows.Media.SolidColorBrush(darkTheme ? System.Windows.Media.Color.FromRgb(24,27,33) : System.Windows.Media.Color.FromRgb(248,249,252));
+            toolbar.Foreground = darkTheme ? System.Windows.Media.Brushes.White : System.Windows.Media.Brushes.Black;
+            if (toolbar.Content is StackPanel panel)
+                foreach (var actions in panel.Children.OfType<StackPanel>())
+                    foreach (var button in actions.Children.OfType<Button>())
+                    {
+                        button.Background = new System.Windows.Media.SolidColorBrush(darkTheme ? System.Windows.Media.Color.FromRgb(39,44,54) : System.Windows.Media.Color.FromRgb(237,239,244));
+                        button.Foreground = toolbar.Foreground;
+                    }
+        }
+        return new { applied = true };
+    }
+    private async Task ScreenshotFromHotkeyAsync()
+    {
+        try { await CaptureScreenshotAsync(null, true); }
+        catch (Exception ex) { PostError(ex is InvalidOperationException or InvalidDataException or TimeoutException ? ex.Message : "Screenshot could not be saved. Try again."); if (session.State == SessionState.Idle) Show(); }
+    }
+    private async Task<object> CaptureScreenshotAsync(Guid? stepId, bool fromHotkey = false)
+    {
+        if (!initialized || busy || exporting || capturing) throw new InvalidOperationException("Wait for the current operation to finish.");
+        capturing = true;
+        try { return await CaptureScreenshotCoreAsync(stepId, fromHotkey); }
+        finally { capturing = false; }
+    }
+    private async Task<object> CaptureScreenshotCoreAsync(Guid? stepId, bool fromHotkey)
+    {
+        // Flush before hiding the editor. The acknowledgement supplies the current selection.
+        if (session.State == SessionState.Idle) await FlushEditorAsync();
+        if (fromHotkey) stepId = editorStepId;
+        var snapshot = editorProjectId == current?.Id ? current : null;
+        if (session.State == SessionState.Idle && stepId is not null && (snapshot is null || !snapshot.Steps.Any(s => s.Id == stepId)))
+            throw new InvalidDataException("Select a step in the current guide first.");
+        if (!Native.GetCursorPos(out var pointer)) throw new InvalidOperationException("Pointer position is unavailable.");
+        var bounds = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(pointer.X, pointer.Y)).Bounds;
+        if ((long)bounds.Width * bounds.Height > 3840L * 2160) throw new InvalidOperationException("Use a monitor at 4K resolution or below for screenshots.");
+        exporting = true;
+        var wasVisible = IsVisible;
+        try
+        {
+            if (wasVisible) Hide();
+            toolbar?.Hide();
+            await Task.Delay(250); // Allow the desktop compositor to remove our windows.
+            var frame = await Task.Run(() =>
+            {
+                using var bitmap = new Bitmap(bounds.Width, bounds.Height);
+                using (var graphics = Graphics.FromImage(bitmap)) graphics.CopyFromScreen(bounds.Location, System.Drawing.Point.Empty, bounds.Size);
+                using var stream = new MemoryStream(); bitmap.Save(stream, ImageFormat.Png);
+                return new Frame(stream.ToArray(), bounds, Stopwatch.GetTimestamp());
+            });
+            if (session.State is SessionState.Recording or SessionState.Paused)
+            {
+                await recorder!.AddScreenshotAsync(frame);
+                return new { captured = true };
+            }
+            var target = snapshot ?? new Guide { Title = "Screenshot guide" };
+            Guid selectedId = Guid.Empty;
+            var result = await ImageImport.StorePngAsync(target, frame.Png, bounds.Width, bounds.Height, store, (g, a) =>
+            {
+                selectedId = ScreenshotSteps.Attach(g, a, stepId);
+            });
+            Select(result.Guide);
+            Editor.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "project.changed", guide = current, stepId = selectedId }, GuideJson.Options));
+            Show(); Activate();
+            return new { captured = true };
+        }
+        finally { exporting = false; if (session.State is SessionState.Recording or SessionState.Paused) toolbar?.Show(); else if (wasVisible) Show(); }
     }
     private async Task<object> CopyAsync(string format)
     {
@@ -260,7 +399,6 @@ public partial class MainWindow : Window
     {
         RequireIdle(); if(current is null) throw new InvalidOperationException("Open a guide first.");
         GuideJson.EnsurePrivacyApplied(current);
-        if (MessageBox.Show("Review all screenshots for sensitive information before exporting. Verify your edits and export only material you are permitted to share.","Review before export",MessageBoxButton.OKCancel,MessageBoxImage.Warning) != MessageBoxResult.OK) return new { cancelled = true };
         var extension = format switch { "portable" => ".capture", "markdown" => ".zip", "docx" => ".docx", "html" => ".html", _ => throw new InvalidDataException("Unsupported export format.") };
         var label = format switch { "docx" => "Word document", "html" => "HTML guide", "markdown" => "Markdown ZIP", _ => "Capture package" };
         var dialog = new Microsoft.Win32.SaveFileDialog { FileName="guide"+extension, Filter=$"{label}|*{extension}", DefaultExt=extension, InitialDirectory=Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), OverwritePrompt=true };
@@ -294,7 +432,12 @@ public partial class MainWindow : Window
 
     private object CompleteFlush(JsonElement payload)
     {
-        if(payload.GetProperty("saved").GetBoolean()) flushCompletion?.TrySetResult();
+        if(payload.GetProperty("saved").GetBoolean())
+        {
+            editorProjectId = payload.TryGetProperty("projectId", out var project) && project.ValueKind == JsonValueKind.String ? project.GetGuid() : null;
+            editorStepId = payload.TryGetProperty("stepId", out var step) && step.ValueKind == JsonValueKind.String ? step.GetGuid() : null;
+            flushCompletion?.TrySetResult();
+        }
         else flushCompletion?.TrySetException(new IOException("Editor changes could not be saved."));
         return new { received = true };
     }
@@ -303,15 +446,14 @@ public partial class MainWindow : Window
         if (!initialized) return;
         flushCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Editor.CoreWebView2.PostWebMessageAsJson("{\"type\":\"editor.flush\"}");
-        await flushCompletion.Task.WaitAsync(TimeSpan.FromSeconds(15));
-        flushCompletion = null;
+        try { await flushCompletion.Task.WaitAsync(TimeSpan.FromSeconds(15)); }
+        finally { flushCompletion = null; }
     }
     private async Task ExitAsync()
     {
-        if(busy || exporting) return;
+        if(busy || exporting || capturing) return;
         if(session.State is SessionState.Recording or SessionState.Paused) { await ToggleAsync(); if(session.State != SessionState.Idle) return; }
-        if (MessageBox.Show("Exit Capture? Any editor changes still being saved should finish before you exit.","Exit",MessageBoxButton.OKCancel)!=MessageBoxResult.OK) return;
-        try { await FlushEditorAsync(); } catch { MessageBox.Show("Editor changes could not be saved. Capture will remain open. Retry Save before exiting.","Unsaved changes"); return; }
-        exiting=true; recorder?.Dispose(); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,1); tray.Dispose(); Editor.Dispose(); System.Windows.Application.Current.Shutdown();
+        try { await FlushEditorAsync(); } catch { PostError("Editor changes could not be saved. Retry Save before exiting."); Show(); return; }
+        exiting=true; recorder?.Dispose(); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,1); Native.UnregisterHotKey(new WindowInteropHelper(this).Handle,3); tray.Dispose(); Editor.Dispose(); System.Windows.Application.Current.Shutdown();
     }
 }

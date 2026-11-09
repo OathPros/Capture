@@ -24,11 +24,11 @@ test('host bridge: create, edit, save, reorder, undo, export and reopen',async({
  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('aside li').first()).toContainText('First action');
  await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Saved locally');
  await page.getByLabel('Guide title').fill('Saved before export');
- await page.getByRole('button',{name:'Word DOCX',exact:true}).click();
+ await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'Word DOCX',exact:true}).click();
  await expect(page.getByRole('status')).toHaveText('Word export finished');
- await page.getByRole('button',{name:'HTML guide',exact:true}).click();
+ await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'HTML guide',exact:true}).click();
  await expect(page.getByRole('status')).toHaveText('HTML export finished');
- await page.getByRole('button',{name:'Markdown ZIP',exact:true}).click();
+ await page.locator('.export-menu summary').click();await page.getByRole('button',{name:'Markdown ZIP',exact:true}).click();
  expect(await page.evaluate(()=>(window as any).__exports)).toEqual(['docx','html','markdown'].map(format=>({format,title:'Saved before export'})));
  expect(await page.evaluate(()=>(window as any).__commands)).toContain('export.request');
  await page.getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:/Saved before export/}).click();

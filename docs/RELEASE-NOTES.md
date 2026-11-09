@@ -1,3 +1,17 @@
+# YU Capture 0.5.0-preview.1 — Screenshots and workspace improvements
+
+- **Add image step** inserts a local image after the selected step, including in an empty guide.
+- **Add image** attaches a picture to an existing text step. **Replace image** keeps titles, instructions and notes and resets the previous image markup/crop/cuts. **Remove image** returns the step to text only.
+- Undo/Redo restores attachments and previous markup. Images work with the existing annotation editor, autosave, clipboard, document exports and portable packages.
+- PNG, JPEG and BMP inputs are normalized to managed PNGs without source metadata. Limits: 64 MB per input, 8,294,400 pixels and 32,768 pixels per side. Images stay on the computer; the original external file is unchanged.
+- **One-off screenshots.** Capture screenshot from the editor, tray or recording toolbar. Ctrl+Shift+S has its own setting, separate from Ctrl+Shift+R. The shortcut replaces the selected step's image; the main screenshot button adds a new step. During recording, manual screenshots append to that recording, including while paused.
+- **Refreshed workspace.** Persistent dark/light themes, themed Windows title bar and recording toolbar, clearer step navigation, compact Export & copy menu, and no automatic scrolling when images load.
+- **No interruption dialogs.** Recording starts immediately from its button or hotkey. Removed disclaimer banners, recording/export reminders, per-image apply confirmations, close-to-tray balloons and exit/discard confirmations. Failures appear inline; file pickers still provide destination selection and overwrite protection.
+- **Apply every blur/redaction in one click.** Use Apply all blur/redaction, or Apply all and continue when exporting/copying. A batch writes all sanitized images and one metadata commit, updates shared steps, clears undo, then removes originals. Failed rendering/saving retains the prior guide; failed cleanup blocks export and can be retried.
+- No guide schema change. Windows CI checks native pixel/image tests, the packaged WebView2 preview and installer lifecycle. Interactive desktop capture, monitor/DPI behavior, shortcut collisions and native theme appearance remain manual validation.
+
+---
+
 # YU Capture 0.4.0-preview.2 — Windows installer
 
 Download `YU-Capture-0.4.0-preview.2-Setup-x64.exe`, open it, and choose Install. Launch YU Capture from the final setup screen or Windows Start menu. No ZIP extraction or separate .NET installation is required.

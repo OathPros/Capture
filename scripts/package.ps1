@@ -7,7 +7,7 @@ try {
         if (-not (Test-Path "artifacts/Capture-win-x64/$file")) { throw "Missing packaged file: $file" }
     }
     Copy-Item README.md,docs/RELEASE-NOTES.md artifacts/Capture-win-x64
-    Compress-Archive -Path artifacts/Capture-win-x64/* -DestinationPath artifacts/Capture-0.4.0-preview.2-win-x64.zip -Force
+    Compress-Archive -Path artifacts/Capture-win-x64/* -DestinationPath artifacts/Capture-0.5.0-preview.1-win-x64.zip -Force
     if (Test-Path artifacts/export-samples/synthetic-guide.html) {
         Compress-Archive -Path artifacts/export-samples/* -DestinationPath artifacts/Capture-export-examples.zip -Force
     }
@@ -28,5 +28,5 @@ try {
     $numericVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
     Invoke-Checked $compiler @("/DAppVersion=$version", "/DNumericVersion=$numericVersion", 'installer/Capture.iss')
     Get-FileHash "artifacts/YU-Capture-$version-Setup-x64.exe" -Algorithm SHA256 | Format-List
-    Get-FileHash artifacts/Capture-0.4.0-preview.2-win-x64.zip -Algorithm SHA256 | Format-List
+    Get-FileHash artifacts/Capture-0.5.0-preview.1-win-x64.zip -Algorithm SHA256 | Format-List
 } finally { Pop-Location }

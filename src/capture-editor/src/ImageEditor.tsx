@@ -49,7 +49,6 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
  const [tool,setTool]=useState<Tool>('select'),[selected,setSelected]=useState<string|null>(null),[style,setStyle]=useState(defaults);
  const [source,setSource]=useState<string|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0),[zoom,setZoom]=useState(0);
  const [preview,setPreview]=useState<Annotation|Region|null>(null),[cropCandidate,setCropCandidate]=useState<Region|null>(null),[displayWidth,setDisplayWidth]=useState(800);
- const section=useRef<HTMLElement>(null);
  const svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),clipboard=useRef<Annotation|null>(null);
  const uid=useId().replace(/[^a-zA-Z0-9]/g,'');
  const crop=step.crop||{x:0,y:0,width:1,height:1};const layout=imageLayout(asset.width,asset.height,step.crop,step.cuts);const view={x:0,y:0,width:layout.width,height:layout.height};
@@ -120,7 +119,6 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
   if((e.key==='Delete'||e.key==='Backspace')&&chosen){e.preventDefault();remove();}
   if(e.ctrlKey||e.metaKey){if(e.key==='c'){e.preventDefault();copy();}if(e.key==='x'){e.preventDefault();copy(true);}if(e.key==='v'){e.preventDefault();paste();}}
  }
- useEffect(()=>{if(source)section.current?.scrollIntoView({block:'start'});},[source]);
  const drawn=step.annotations.map(a=>(preview&&'id'in preview&&preview.id===a.id)?preview:a);
  const selection=(preview&&'id'in preview&&preview.id===selected?preview:chosen);
  const originalBox=cropCandidate||cutCandidate||(preview&&(drag.current?.kind==='crop'||drag.current?.kind==='cut')?preview:null);
@@ -131,7 +129,7 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
  const planned=candidateCut?imageLayout(asset.width,asset.height,step.crop,[...(step.cuts||[]),candidateCut]):null;
  function projected(a:Annotation):Annotation|null {const b=projectRegion(a,asset.width,asset.height,layout);return b.width>0&&b.height>0?{...a,x:b.x/view.width,y:b.y/view.height,width:b.width/view.width,height:b.height/view.height}:null;}
 
- return <section ref={section} className="image-editor" aria-label="Screenshot tools" onKeyDown={keyboard}>
+ return <section className="image-editor" aria-label="Screenshot tools" onKeyDown={keyboard}>
   <div className="image-editor-heading"><strong>Screenshot editor</strong><span>{Math.round(view.width)} × {Math.round(view.height)} px</span><label>Zoom<select aria-label="Screenshot zoom" value={zoom} onChange={e=>setZoom(Number(e.target.value))}><option value={0}>Fit</option>{[.5,.75,1,1.5,2,3].map(z=><option key={z} value={z}>{z*100}%</option>)}</select></label></div>
   <div role="toolbar" aria-label="Image tools" className="image-tools">{tools.map(t=><button type="button" key={t.id} aria-pressed={tool===t.id} title={t.name==='Blur'?'Blur softens pixels; use Redact to remove sensitive information.':`${t.name}: drag on the screenshot`} onClick={()=>{setTool(t.id);setCropCandidate(null);setCutCandidate(null);if(t.id!=='select')setSelected(null);}}><span aria-hidden="true">{t.icon}</span>{t.name}</button>)}</div>
   {tool==='cut'&&<label className="cut-direction">Cut direction<select aria-label="Cut direction" value={cutAxis} onChange={e=>{setCutAxis(e.target.value as 'horizontal'|'vertical');setCutCandidate(null);}}><option value="horizontal">Horizontal strip</option><option value="vertical">Vertical strip</option></select></label>}
@@ -152,7 +150,7 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
    {cropCandidate&&<><button className="primary" onClick={()=>{onChange({crop:cropCandidate});setCropCandidate(null);setTool('select');}}>Apply crop</button><button onClick={()=>setCropCandidate(null)}>Cancel crop</button></>}
    {pendingPixels>0&&<button className="pixel-apply" onClick={onApplyPixels}>Apply blur/redaction permanently</button>}
   </div>
-  <p className="tool-hint">{tool==='select'?'Select an annotation to move it or resize its handles. Use Undo / Redo for reversible edits.':tool==='cut'?'Drag a full-width or full-height strip to remove, then Apply cut. The remaining image joins together. Cut is reversible, not redaction.':tool==='crop'?'Drag the region to keep, then choose Apply crop. Reset crop restores the full image.':tool==='blur'?'Drag to blur an area. Blur is not secure redaction; use Redact for secrets.':'Drag on the screenshot to add '+tool+'.'}{pendingPixels>0?' Apply pixel edits permanently before exporting. The original screenshot will be replaced and Undo cleared.':''}</p>
+  <p className="tool-hint">{tool==='select'?'Select an annotation to move it or resize its handles. Use Undo / Redo for reversible edits.':tool==='cut'?'Drag a full-width or full-height strip to remove, then Apply cut. The remaining image joins together. ':tool==='crop'?'Drag the region to keep, then choose Apply crop. Reset crop restores the full image.':tool==='blur'?'Drag to blur an area.':'Drag on the screenshot to add '+tool+'.'}</p>
   {error?<div className="image-error" role="alert"><strong>Screenshot unavailable</strong><p>{error}</p><button onClick={()=>setRetry(r=>r+1)}>Retry screenshot</button></div>:!source?<div className="image-loading" role="status">Loading screenshot…</div>:
   <div className="image-stage" data-tool={tool} ref={viewport}><svg ref={svg} role="img" aria-label="Screenshot annotation canvas" tabIndex={0} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} width={view.width} height={view.height} style={{width:zoom?view.width*zoom:'100%',height:'auto',cursor:tool==='select'?'default':'crosshair'}} onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{drag.current=null;setPreview(null);}}>
    <defs><g id={`${uid}-source`}><image href={source} width={asset.width} height={asset.height} onLoad={()=>{void request('asset.previewReady',{projectId,assetId:asset.id,width:asset.width,height:asset.height}).catch(()=>{});}} onError={()=>setError('The PNG could not be decoded. Restore the screenshot from a complete project backup.')}/>

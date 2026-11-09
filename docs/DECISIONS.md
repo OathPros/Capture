@@ -46,3 +46,22 @@
 - Cut: Store up to 32 original-coordinate horizontal/vertical intervals. Merge them into pixel axis segments; join source tiles and project annotations afterward. UI and native exporters share the same rounding/geometry contract. No destructive source replacement for cuts; portable projects preserve editable originals.
 - Clipboard: HTML source text and Word-ready RTF containing PNGs. Word receives RTF/Unicode only because CF_HTML with data-image URLs can lose images in Word. Render in memory, then set the Windows clipboard on STA; preserve file exports separately. Word's user paste preferences can still choose plain text.
 - Schema: 1.2 adds title fields/cut intervals and backs up older metadata before the first save. Full capture-provider/mixed-DPI behavior remains a separate manual gate.
+
+
+## ADR — Local image insertion
+- Date: 2026-11-09
+- Choice: Import PNG/JPEG/BMP through a native chooser and normalize into checksummed project PNGs using the existing 4K pixel limit. Bridge requests identify the project, never an arbitrary file path.
+- Why: Reuses annotation/export/privacy handling without a schema change or uploads. Source metadata and absolute paths are not retained. The asset is durably saved before an undoable step attachment; a crash between those operations can leave an unreferenced managed asset, rather than a broken image reference.
+- Undo: Rebase existing undo snapshots to the new host asset manifest. Keep source assets for undo after replacement/removal; portable exports include only referenced assets. Permanent privacy edits retain their existing cleanup/history rules.
+- Limits: 64 MB input, 8,294,400 decoded pixels, 32,768 pixels per side. No paste, drag/drop, additional images per step or animated formats in this change.
+- Evidence: Linux solution compilation, core/editor tests and browser bridge tests pass. Windows decoder/chooser/installer validation remains pending.
+
+
+## ADR — Screenshot shortcut, workspace themes and batch pixel application
+- Date: 2026-11-09
+- Choice: Add explicit one-off screenshots to the existing local pipeline. The editor flush supplies current selection before a global hotkey capture; hide Capture windows, sample the pointer monitor, and save the asset and step attachment together. During recording, queue the manual frame on the existing single consumer worker so guide writes remain serialized.
+- Shortcuts: Independent Ctrl+Shift+letter settings with distinct letters, migration for existing settings and rollback on native registration/settings-write failures. Screenshot defaults to S (P if an upgraded recording key already uses S).
+- Appearance: CSS variable themes persisted in WebView2 localStorage, native immersive title bars and themed recording controls. Export/copy actions use one compact accessible details menu. Image loading no longer scrolls the entire document.
+- Interaction: The user's explicit request supersedes the original build guide's repeated recording/export confirmation requirements. Remove disclaimer banners and application message boxes; keep operational errors inline and native file selection/overwrite protection. Discard is clearly named and immediate. Permanent image actions still state their concrete effect on originals/Undo next to the action.
+- Batch storage: Render each affected asset once, stage all sanitized files and commit metadata/cleanup intent once. Roll back new files on render/save failure. Delete originals only after commit; propagate cleanup state to the editor and block output until cleanup succeeds. Permanent edits clear history for the entire guide.
+- Evidence: Core/browser/editor tests and Linux cross-compilation pass. Actual Windows capture/compositing, global shortcut conflict/rollback, title bar and pixel execution remain manual/Windows CI gates.

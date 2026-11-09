@@ -1,3 +1,29 @@
+# Current work — 0.5.0-preview.1 (unreleased)
+
+## Implemented
+- Native local PNG/JPEG/BMP chooser behind the allowlisted `asset.import` bridge. No browser-supplied filesystem paths. Checks project identity, idle state, file size, decoded dimensions and managed PNG validation. Re-encodes pixels without source metadata, saves a checksummed local asset and rolls back the new file on save failure.
+- Add image step inserts after the selected step, including empty guides. Existing steps offer Add image, Replace image and Remove image. Replacement preserves text, resets old annotations/crop/cuts and marks the step for review. Ordinary undo retains the managed asset manifest and restores attachments/markup. Native pixel sanitization still clears history.
+- Imported images use the existing annotation, preview, autosave, clipboard and export pipelines. No schema change. Source file stays unchanged; remove/replace are reversible edits and do not securely delete old project assets.
+- App/bridge/package/CI artifact versions advanced to 0.5.0-preview.1; published download links still refer to the existing released installer.
+
+## Screenshot, appearance and export additions
+- One-off monitor screenshot command from the editor, selected step, tray and recording toolbar. Ctrl+Shift+S is separately configurable from Ctrl+Shift+R. Saved settings without a screenshot key migrate automatically, including choosing P when an existing recording key uses S. Shortcut conflicts/save failures restore previous registrations.
+- Editor flush includes project/step selection before hotkey capture. The app hides its own windows before sampling, applies the existing 4K limit, and saves the PNG plus attachment together. Recording screenshots enter the same bounded worker queue, even during pause; hook callbacks remain unchanged. Ordinary screenshot replacement supports undo.
+- Persistent dark/light themes, themed native title bar/recording toolbar, refreshed workspace and compact Export & copy menu. Removed disclaimer banner and all application message-box confirmations; errors appear inline, including a native startup error view when WebView2 cannot initialize. Native file dialogs and overwrite protection remain.
+- Apply all blur/redaction stages each affected image once, updates all shared references, and commits guide/cleanup intent once before deleting originals. Render/save failure rolls back new files; cleanup failures return the committed guide and block exports until retried. The editor offers one-click application and continuation for exports and clipboard actions.
+
+## Validation in this Linux session
+- .NET 10.0.403 solution Release build passes with zero warnings/errors; Windows test sources compile.
+- 63 core tests and 8 editor unit tests pass; TypeScript/Vite production build passes.
+- 17 browser tests pass, none skipped. Includes screenshot attachment/new steps/undo, selection flush, independent shortcuts, theme persistence, multi-image/shared-step bulk apply, export continuation, failure/cleanup retry and offline standalone HTML. Dark/light screenshot previews inspected.
+- Six Windows image import cases and two new Windows bulk pixel cases compile but have NOT run on Linux. Bulk cases check shared pixels and rollback when a later image fails.
+
+## Unverified / next gates
+- Run Windows CI, native image import/pixel tests, installer and packaged WebView2 smoke checks before publishing. Native file pickers, actual monitor capture, independent global hotkeys, compositor hiding, DPI/multi-monitor alignment and native theme appearance have not been tested here.
+- Complete the Version 5 checks in MANUAL-TESTS.md. No installer or release has been published for this version.
+
+---
+
 # Current milestone
 Version 4 quality-of-life update: meaningful capture text, fitted highlights, real strip cuts, and direct clipboard exports.
 
@@ -16,7 +42,7 @@ Version 4 quality-of-life update: meaningful capture text, fitted highlights, re
 - The exact Word clipboard RTF opened and rendered in LibreOffice with its screenshot and bold field labels. Microsoft Word's paste preference can override rich formatting; use Keep Source Formatting.
 
 ## Remaining limits
-Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, manual image insertion, signing, WGC replacement and hosted integrations remain unfinished.
+Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, signing, WGC replacement and hosted integrations remain unfinished.
 
 ## Installer preview 0.4.0-preview.2 — released
 - PR #1 merged; Windows main run 41833444333 passed all 95 existing tests, packaging, installed-app WebView2 screenshot decoding, installation, repeat installation and uninstall with user-file preservation.
