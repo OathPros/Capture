@@ -7,3 +7,5 @@ artifacts/
 TestResults/
 **/test-results/
 **/playwright-report/
+
+/work/

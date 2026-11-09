@@ -7,11 +7,11 @@ using System.Threading.Channels;
 using Capture.Core;
 using FlaUI.UIA3;
 namespace Capture.App;
-internal sealed record Click(int X, int Y, long Timestamp);
+internal sealed record Click(int X, int Y, long Timestamp, Frame? ManualFrame = null, TaskCompletionSource? Completion = null);
 internal sealed record Frame(byte[] Png, Rectangle Bounds, long Timestamp);
 internal sealed class Recorder : IDisposable
 {
-    private readonly Channel<Click> clicks = Channel.CreateBounded<Click>(new BoundedChannelOptions(128) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
+    private readonly Channel<Click> clicks = Channel.CreateBounded<Click>(new BoundedChannelOptions(128) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false });
     private readonly object frameLock = new();
     private readonly Queue<Frame> frames = new();
     private readonly Native.HookProc callback;
@@ -22,7 +22,7 @@ internal sealed class Recorder : IDisposable
     private volatile bool running, paused;
     private readonly ProjectStore store;
     public IntPtr MaskWindow { get; set; }
-    public Guide Guide { get; } = new() { Title = "Recorded workflow " + DateTime.Now.ToString("yyyy-MM-dd HH:mm") };
+    public Guide Guide { get; private set; } = new() { Title = "Recorded workflow " + DateTime.Now.ToString("yyyy-MM-dd HH:mm") };
     public event Action<string>? Status;
     private readonly string[] exclusions;
     public Recorder(ProjectStore store, string[] exclusions) { this.store = store; this.exclusions = exclusions; callback = OnMouse; }
@@ -106,6 +106,13 @@ internal sealed class Recorder : IDisposable
         }
         catch { Volatile.Write(ref hoverTarget,null); }
     }
+    public async Task AddScreenshotAsync(Frame frame)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!running || !clicks.Writer.TryWrite(new(0, 0, frame.Timestamp, frame, completion)))
+            throw new InvalidOperationException("Screenshot queue is busy. Try again.");
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(15));
+    }
     private void ProcessClicks()
     {
         UIA3Automation? automation = null;
@@ -115,6 +122,19 @@ internal sealed class Recorder : IDisposable
         {
             while (clicks.Reader.TryRead(out var click))
             {
+                if (click.ManualFrame is { } manual)
+                {
+                    try
+                    {
+                        var imported = ImageImport.StorePngAsync(Guide, manual.Png, manual.Bounds.Width, manual.Bounds.Height, store,
+                            (g, a) => ScreenshotSteps.Attach(g, a)).GetAwaiter().GetResult();
+                        Guide = imported.Guide;
+                        Status?.Invoke($"Recording · {Guide.Steps.Count} steps · Screenshot added");
+                        click.Completion!.TrySetResult();
+                    }
+                    catch (Exception ex) { click.Completion!.TrySetException(ex); }
+                    continue;
+                }
                 if (!IsAllowed(Native.WindowFromPoint(new() { X = click.X, Y = click.Y }))) continue;
                 try
                 {

@@ -6,15 +6,21 @@
 - Imported images use the existing annotation, preview, autosave, clipboard and export pipelines. No schema change. Source file stays unchanged; remove/replace are reversible edits and do not securely delete old project assets.
 - App/bridge/package/CI artifact versions advanced to 0.5.0-preview.1; published download links still refer to the existing released installer.
 
+## Screenshot, appearance and export additions
+- One-off monitor screenshot command from the editor, selected step, tray and recording toolbar. Ctrl+Shift+S is separately configurable from Ctrl+Shift+R. Saved settings without a screenshot key migrate automatically, including choosing P when an existing recording key uses S. Shortcut conflicts/save failures restore previous registrations.
+- Editor flush includes project/step selection before hotkey capture. The app hides its own windows before sampling, applies the existing 4K limit, and saves the PNG plus attachment together. Recording screenshots enter the same bounded worker queue, even during pause; hook callbacks remain unchanged. Ordinary screenshot replacement supports undo.
+- Persistent dark/light themes, themed native title bar/recording toolbar, refreshed workspace and compact Export & copy menu. Removed disclaimer banner and all application message-box confirmations; errors appear inline, including a native startup error view when WebView2 cannot initialize. Native file dialogs and overwrite protection remain.
+- Apply all blur/redaction stages each affected image once, updates all shared references, and commits guide/cleanup intent once before deleting originals. Render/save failure rolls back new files; cleanup failures return the committed guide and block exports until retried. The editor offers one-click application and continuation for exports and clipboard actions.
+
 ## Validation in this Linux session
 - .NET 10.0.403 solution Release build passes with zero warnings/errors; Windows test sources compile.
-- 61 core tests and 8 editor unit tests pass; TypeScript/Vite production build passes.
-- Browser suite: 12 passed, one skipped (standalone HTML export sample not generated in this session). New checks cover insertion/attachment/replacement/removal, save/reopen, manifest-preserving undo/redo, cancellation, invalid imports and save failure/retry.
-- Added six Windows image import cases: PNG/JPEG/BMP normalization/persistence/portable roundtrip, invalid and oversized rejection, and save rollback. These have compiled but have NOT run on Linux.
+- 63 core tests and 8 editor unit tests pass; TypeScript/Vite production build passes.
+- 17 browser tests pass, none skipped. Includes screenshot attachment/new steps/undo, selection flush, independent shortcuts, theme persistence, multi-image/shared-step bulk apply, export continuation, failure/cleanup retry and offline standalone HTML. Dark/light screenshot previews inspected.
+- Six Windows image import cases and two new Windows bulk pixel cases compile but have NOT run on Linux. Bulk cases check shared pixels and rollback when a later image fails.
 
 ## Unverified / next gates
-- Run Windows CI and the native image import tests, installer and packaged WebView2 smoke checks before publishing. Native chooser interaction, GDI decoding and installed-app behavior have not been tested here.
-- Complete the Version 5 image insertion checks in MANUAL-TESTS.md. No installer or release has been published for this version.
+- Run Windows CI, native image import/pixel tests, installer and packaged WebView2 smoke checks before publishing. Native file pickers, actual monitor capture, independent global hotkeys, compositor hiding, DPI/multi-monitor alignment and native theme appearance have not been tested here.
+- Complete the Version 5 checks in MANUAL-TESTS.md. No installer or release has been published for this version.
 
 ---
 

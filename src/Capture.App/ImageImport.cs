@@ -29,11 +29,15 @@ public static class ImageImport
         }
         catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.ExternalException or OutOfMemoryException)
         { throw new InvalidDataException("This image could not be decoded. Choose a valid PNG, JPEG or BMP image.", ex); }
+        return await StorePngAsync(guide, png, width, height, store);
+    }
+    public static async Task<(Guide Guide, Asset Asset)> StorePngAsync(Guide guide, byte[] png, int width, int height, ProjectStore store, Action<Guide, Asset>? attach = null)
+    {
         var id = Guid.NewGuid().ToString();
         var asset = new Asset(id, $"assets/{id}.png", "image/png", width, height, Convert.ToHexString(SHA256.HashData(png)));
         GuideJson.ValidatePng(png, asset);
         var next = GuideJson.Parse(GuideJson.Serialize(guide));
-        next.Assets.Add(asset); next.UpdatedAt = DateTimeOffset.UtcNow;
+        next.Assets.Add(asset); attach?.Invoke(next, asset); next.UpdatedAt = DateTimeOffset.UtcNow;
         GuideJson.Validate(next);
         var path = GuideJson.SafePath(store.DirectoryFor(next.Id), asset.RelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

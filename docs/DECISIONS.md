@@ -55,3 +55,13 @@
 - Undo: Rebase existing undo snapshots to the new host asset manifest. Keep source assets for undo after replacement/removal; portable exports include only referenced assets. Permanent privacy edits retain their existing cleanup/history rules.
 - Limits: 64 MB input, 8,294,400 decoded pixels, 32,768 pixels per side. No paste, drag/drop, additional images per step or animated formats in this change.
 - Evidence: Linux solution compilation, core/editor tests and browser bridge tests pass. Windows decoder/chooser/installer validation remains pending.
+
+
+## ADR — Screenshot shortcut, workspace themes and batch pixel application
+- Date: 2026-11-09
+- Choice: Add explicit one-off screenshots to the existing local pipeline. The editor flush supplies current selection before a global hotkey capture; hide Capture windows, sample the pointer monitor, and save the asset and step attachment together. During recording, queue the manual frame on the existing single consumer worker so guide writes remain serialized.
+- Shortcuts: Independent Ctrl+Shift+letter settings with distinct letters, migration for existing settings and rollback on native registration/settings-write failures. Screenshot defaults to S (P if an upgraded recording key already uses S).
+- Appearance: CSS variable themes persisted in WebView2 localStorage, native immersive title bars and themed recording controls. Export/copy actions use one compact accessible details menu. Image loading no longer scrolls the entire document.
+- Interaction: The user's explicit request supersedes the original build guide's repeated recording/export confirmation requirements. Remove disclaimer banners and application message boxes; keep operational errors inline and native file selection/overwrite protection. Discard is clearly named and immediate. Permanent image actions still state their concrete effect on originals/Undo next to the action.
+- Batch storage: Render each affected asset once, stage all sanitized files and commit metadata/cleanup intent once. Roll back new files on render/save failure. Delete originals only after commit; propagate cleanup state to the editor and block output until cleanup succeeds. Permanent edits clear history for the entire guide.
+- Evidence: Core/browser/editor tests and Linux cross-compilation pass. Actual Windows capture/compositing, global shortcut conflict/rollback, title bar and pixel execution remain manual/Windows CI gates.
