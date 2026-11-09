@@ -46,3 +46,12 @@
 - Cut: Store up to 32 original-coordinate horizontal/vertical intervals. Merge them into pixel axis segments; join source tiles and project annotations afterward. UI and native exporters share the same rounding/geometry contract. No destructive source replacement for cuts; portable projects preserve editable originals.
 - Clipboard: HTML source text and Word-ready RTF containing PNGs. Word receives RTF/Unicode only because CF_HTML with data-image URLs can lose images in Word. Render in memory, then set the Windows clipboard on STA; preserve file exports separately. Word's user paste preferences can still choose plain text.
 - Schema: 1.2 adds title fields/cut intervals and backs up older metadata before the first save. Full capture-provider/mixed-DPI behavior remains a separate manual gate.
+
+
+## ADR — Local image insertion
+- Date: 2026-11-09
+- Choice: Import PNG/JPEG/BMP through a native chooser and normalize into checksummed project PNGs using the existing 4K pixel limit. Bridge requests identify the project, never an arbitrary file path.
+- Why: Reuses annotation/export/privacy handling without a schema change or uploads. Source metadata and absolute paths are not retained. The asset is durably saved before an undoable step attachment; a crash between those operations can leave an unreferenced managed asset, rather than a broken image reference.
+- Undo: Rebase existing undo snapshots to the new host asset manifest. Keep source assets for undo after replacement/removal; portable exports include only referenced assets. Permanent privacy edits retain their existing cleanup/history rules.
+- Limits: 64 MB input, 8,294,400 decoded pixels, 32,768 pixels per side. No paste, drag/drop, additional images per step or animated formats in this change.
+- Evidence: Linux solution compilation, core/editor tests and browser bridge tests pass. Windows decoder/chooser/installer validation remains pending.

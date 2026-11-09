@@ -12,7 +12,7 @@ Use Windows 11 x64, WebView2 Runtime and fictional data. Record OS/build, displa
 8. Run ten start/stop cycles and 100 clicks; observe responsiveness and bounded memory. Try inaccessible UIA, protected/elevated windows and a stalled provider; verify safe fallback/warning and restart instruction. Do not attempt to bypass protected surfaces.
 9. Keyboard-navigate editor controls, review focus visibility, text scaling and high-contrast behavior. Verify export instructions and screenshots visually in a compatible Markdown viewer.
 
-PDF, manual screenshots and hosted integrations are not implemented; do not mark those specification gates passed.
+PDF and hosted integrations are not implemented; do not mark those specification gates passed.
 
 ## Screenshot editor acceptance
 1. Open an existing recorded guide in the new build. Confirm PNGs are visible, step switching works and missing files produce a specific error/Retry.
@@ -26,3 +26,11 @@ PDF, manual screenshots and hosted integrations are not implemented; do not mark
 2. Check that the fitted highlight encloses the actual control, including clicking a text child inside a button. Test pre-click navigation, negative-origin monitors and mixed DPI. Old recorded highlights remain editable but cannot be automatically re-detected from their PNGs.
 3. Remove a browser tab/tool strip with horizontal Cut strip, then an interior gap and a vertical strip. Verify the gap closes, annotations can still be moved/resized, undo/reset/reopen works, and DOCX/MD/HTML/clipboard pictures match. Crop/cut are not redaction.
 4. Copy HTML code into a text editor and open the pasted complete document offline. Copy steps for Word directly into Word using Keep Source Formatting: confirm headings, bold field runs, notes, image order/size and Unicode. Keep Text Only is expected to omit images. Verify no export save dialog/file is needed. Try a busy clipboard and verify edits remain intact.
+
+
+## Version 5 image insertion — Windows validation pending
+1. Create an empty guide and choose Add image step. Import a local PNG, JPEG and BMP. Verify the native chooser, local preview and insertion after the selected step. Cancel the chooser and check no step was added.
+2. Add image to an existing text step, then replace a captured image. Confirm text stays intact, previous annotations/crop/cuts clear, the step needs review, and Undo/Redo restores the correct image and markup. Remove image, undo, save, exit and reopen.
+3. Delete/move the original external file after import; reopen the guide and verify the managed image still loads. Annotate/crop/redact it and check Word/HTML/Markdown/clipboard and portable roundtrip.
+4. Choose invalid, oversized and unavailable files. Check errors preserve text and undo history. Simulate disk/save failure, retry Save and verify the last saved guide remains usable. Removing/replacing an image is reversible editing, not secure deletion of the old project asset.
+5. Run the Windows image import tests and installer/packaged WebView2 smoke checks before publishing 0.5.0-preview.1. Linux compilation/browser tests do not validate the native Windows chooser or GDI decoding.

@@ -84,13 +84,14 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.4.0-preview.1", guide = current, recording = session.State.ToString() },
+                "editor.ready" => new { version = "0.5.0-preview.1", guide = current, recording = session.State.ToString() },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "project.list" => await store.ListAsync(),
                 "project.open" => await OpenAsync(p.GetProperty("id").GetGuid()),
                 "project.save" => await SaveAsync(p),
                 "asset.read" => await ReadAssetAsync(p),
+                "asset.import" => await ImportImageAsync(p),
                 "asset.previewReady" => PreviewReady(p),
                 "asset.applyPixelEdits" => await ApplyPixelEditsAsync(p),
                 "asset.finishCleanup" => await FinishCleanupAsync(),
@@ -166,6 +167,22 @@ public partial class MainWindow : Window
         var snapshot=current;
         var image=await ExportImageRenderer.ReadSourceAsync(snapshot,assetId,store.DirectoryFor(snapshot.Id));
         return new { url="data:image/png;base64,"+Convert.ToBase64String(image.Png), width=image.Width,height=image.Height };
+    }
+    private async Task<object?> ImportImageAsync(JsonElement payload)
+    {
+        RequireIdle();
+        if (current is null || payload.GetProperty("projectId").GetGuid() != current.Id)
+            throw new InvalidDataException("Open this image's project first.");
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Choose a step image", Filter = "Images (PNG, JPEG, BMP)|*.png;*.jpg;*.jpeg;*.bmp", CheckFileExists = true, Multiselect = false };
+        exporting = true;
+        try
+        {
+            if (dialog.ShowDialog(this) != true) return null;
+            var result = await Task.Run(() => ImageImport.ImportAsync(current, dialog.FileName, store));
+            current = result.Guide;
+            return result.Asset;
+        }
+        finally { exporting = false; }
     }
     private async Task<object?> ApplyPixelEditsAsync(JsonElement payload)
     {

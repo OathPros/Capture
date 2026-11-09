@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { request, onProjectChanged, onFlush } from './bridge';
-import { Guide, Step, moveStep } from './model';
+import { Asset, Guide, Step, moveStep } from './model';
 import './style.css';
 import {ImageEditor} from './ImageEditor';
 import {FormattedText} from './FormattedText';
@@ -47,6 +47,29 @@ function App() {
  function stepEdit(change: Partial<Step>) { if(guide) edit({...guide,steps:guide.steps.map((s,i)=>i===selected?{...s,...change}:s)}); }
  function undo() { if(!guide || !history.length) return; setFuture(f=>[guide,...f]); setGuide(history.at(-1)!); setHistory(h=>h.slice(0,-1)); }
  function redo() { if(!guide || !future.length) return; setHistory(h=>[...h,guide]); setGuide(future[0]); setFuture(f=>f.slice(1)); }
+ async function importImage(newStep: boolean) {
+  await act(async()=>{
+   await flush();
+   const base=latest.current;if(!base)return;
+   const image=await request<Asset|null>('asset.import',{projectId:base.id});
+   if(!image){setStatus('Image selection cancelled');return;}
+   // Native asset identity is immutable. Keep the manifest in every undo snapshot.
+   const withAsset=(g:Guide):Guide=>({...g,assets:[...g.assets,image]});
+   const imported=withAsset(base);
+   saved.current=JSON.stringify(imported);
+   setHistory(h=>[...h.slice(-49).map(withAsset),imported]);setFuture([]);
+   const change={assetId:image.id,annotations:[],crop:null,cuts:[],needsReview:true};
+   const steps=[...imported.steps];
+   if(newStep){
+    const index=steps.length?selected+1:0;
+    steps.splice(index,0,{id:crypto.randomUUID(),order:index+1,title:'New image step',instruction:'',notes:'',...change});
+    select(index);
+   } else steps[selected]={...steps[selected],...change};
+   const next={...imported,steps:steps.map((s,i)=>({...s,order:i+1}))};
+   latest.current=next;setGuide(next);
+   await save(next);
+  });
+ }
  const step=guide?.steps[selected], asset=guide?.assets.find(a=>a.id===step?.assetId);
  return <><header><strong>CAPTURE <small>PREVIEW</small></strong><span>Local guides. Your work stays on this computer.</span><button disabled={busy} onClick={()=>void act(async()=>{await flush();setSettings(await request('settings.get'));})}>Settings</button></header>
  <div className="notice">Early Windows preview · Review every screenshot. Sensitive information may be visible. Review screenshots before sharing. Apply blur/redaction permanently before exporting. PDF export is not yet available.</div>
@@ -57,11 +80,12 @@ function App() {
  {settings ? <main className="settings"><h1>Settings</h1><label>Start / finish shortcut: Ctrl + Shift + <select value={settings.hotkey} onChange={e=>setSettings({...settings,hotkey:e.target.value})}>{'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(k=><option key={k}>{k}</option>)}</select></label><label>Excluded process names (one per line, case-insensitive partial matches)<textarea value={settings.exclusions.join('\n')} onChange={e=>setSettings({...settings,exclusions:e.target.value.split('\n')})}/></label><p>Pause before opening sensitive material. Private browser windows are not automatically detected. Do not record credentials or institutional personal records.</p><button disabled={busy} onClick={()=>void act(async()=>{await request('settings.update',settings);setSettings(null);})}>Save settings</button><button onClick={()=>setSettings(null)}>Back</button></main>
  : !guide ? <main className="projects"><h1>Your guides</h1><p>Record a workflow across your Windows applications, then edit the captured steps here.</p>{!projects.length && <p className="empty">No guides yet. Choose Record workflow to start, or New text guide to write instructions.</p>}<div className="cards">{projects.map(g=><button disabled={busy} key={g.id} className="card" onClick={()=>void act(async()=>load(await request('project.open',{id:g.id})))}><strong>{g.title}</strong><span>{g.steps.length} steps · {new Date(g.updatedAt).toLocaleString()}</span></button>)}</div></main>
  : <><section className="document-header"><label>Guide title<input value={guide.title} maxLength={1000} onChange={e=>edit({...guide,title:e.target.value})}/></label><div><button disabled={busy} onClick={()=>void act(flush)}>Save</button><button disabled={!history.length} onClick={undo}>Undo</button><button disabled={!future.length} onClick={redo}>Redo</button><button disabled={busy} title="Copy the complete self-contained HTML source, including its images." onClick={()=>void act(async()=>{await flush();await request('clipboard.copy',{format:'html'});setStatus('HTML code copied');})}>Copy HTML code</button><button disabled={busy} title="Copy formatted steps and screenshots. In Word, paste using Keep Source Formatting." onClick={()=>void act(async()=>{await flush();await request('clipboard.copy',{format:'word'});setStatus('Word steps copied — paste into Word');})}>Copy steps for Word</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();const r=await request<{cancelled?:boolean}>('export.request',{format:'docx'});setStatus(r.cancelled?'Export cancelled':'Word export finished');})}>Word DOCX</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();const r=await request<{cancelled?:boolean}>('export.request',{format:'html'});setStatus(r.cancelled?'Export cancelled':'HTML export finished');})}>HTML guide</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();const r=await request<{cancelled?:boolean}>('export.request',{format:'markdown'});setStatus(r.cancelled?'Export cancelled':'Markdown export finished');})}>Markdown ZIP</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();const r=await request<{cancelled?:boolean}>('export.request',{format:'portable'});setStatus(r.cancelled?'Export cancelled':'Package export finished');})}>Portable package</button></div></section>
- <div className="workspace"><aside><h2>Steps</h2><button onClick={()=>{edit({...guide,steps:[...guide.steps,{id:crypto.randomUUID(),order:guide.steps.length+1,title:'New step',instruction:'',notes:'',assetId:null,annotations:[],needsReview:false}]});select(guide.steps.length);}}>+ Add text step</button><ol>{guide.steps.map((s,i)=><li key={s.id}><button aria-current={i===selected?'step':undefined} onClick={()=>select(i)}>{i+1}. <FormattedText text={s.title} fields={s.titleFields}/>{s.needsReview?' · Review':''}</button></li>)}</ol></aside>
+ <div className="workspace"><aside><h2>Steps</h2><button onClick={()=>{edit({...guide,steps:[...guide.steps,{id:crypto.randomUUID(),order:guide.steps.length+1,title:'New step',instruction:'',notes:'',assetId:null,annotations:[],needsReview:false}]});select(guide.steps.length);}}>+ Add text step</button><button disabled={busy || guide.steps.length>=10000} onClick={()=>void importImage(true)}>+ Add image step</button><ol>{guide.steps.map((s,i)=><li key={s.id}><button aria-current={i===selected?'step':undefined} onClick={()=>select(i)}>{i+1}. <FormattedText text={s.title} fields={s.titleFields}/>{s.needsReview?' · Review':''}</button></li>)}</ol></aside>
  <main className="editor"><details className="guide-introduction"><summary>Guide introduction</summary><label>Introduction<textarea value={guide.summary} onChange={e=>edit({...guide,summary:e.target.value})}/></label></details>{step ? <><div className="step-actions"><button disabled={selected===0} onClick={()=>{edit(moveStep(guide,selected,-1));select(selected-1);}}>Move up</button><button disabled={selected===guide.steps.length-1} onClick={()=>{edit(moveStep(guide,selected,1));select(selected+1);}}>Move down</button><button onClick={()=>{const steps=[...guide.steps];steps.splice(selected+1,0,{...structuredClone(step),id:crypto.randomUUID()});edit({...guide,steps});select(selected+1);}}>Duplicate</button><button onClick={()=>{edit({...guide,steps:guide.steps.filter((_,i)=>i!==selected)});select(Math.max(0,selected-1));}}>Delete step</button></div><label>Step title<input ref={titleInput} value={step.title} onSelect={()=>setTitleSelection((titleInput.current?.selectionEnd||0)>(titleInput.current?.selectionStart||0))} onChange={e=>stepEdit({title:e.target.value})}/></label>
  <div className="title-format"><span>Use sentence case; bold field/control names.</span><button disabled={!titleSelection} onMouseDown={e=>e.preventDefault()} onClick={()=>{const input=titleInput.current;if(!input)return;const text=step.title.slice(input.selectionStart||0,input.selectionEnd||0).trim();if(text&&text.length<=120)stepEdit({titleFields:[...new Set([...(step.titleFields||[]),text])].slice(-32)});}}>Bold field</button><button disabled={!step.titleFields?.length} onClick={()=>stepEdit({titleFields:[]})}>Clear bold</button></div>
  <div className="title-preview" aria-label="Formatted step title"><FormattedText text={step.title} fields={step.titleFields}/></div>
- {asset && <ImageEditor projectId={guide.id} asset={asset} step={step} onChange={change=>stepEdit({...change,needsReview:true})} onUndo={undo} onRedo={redo} canUndo={history.length>0} canRedo={future.length>0} onApplyPixels={()=>void act(async()=>{
+ <div className="step-actions"><button disabled={busy} onClick={()=>void importImage(false)}>{asset?'Replace image':'Add image'}</button>{asset && <button onClick={()=>stepEdit({assetId:null,annotations:[],crop:null,cuts:[],needsReview:true})}>Remove image</button>}</div>
+ {asset && <ImageEditor key={`${step.id}:${asset.id}`} projectId={guide.id} asset={asset} step={step} onChange={change=>stepEdit({...change,needsReview:true})} onUndo={undo} onRedo={redo} canUndo={history.length>0} canRedo={future.length>0} onApplyPixels={()=>void act(async()=>{
   await flush();const result=await request<{guide:Guide;warning?:string}|null>('asset.applyPixelEdits',{assetId:asset.id});
   if(result){const index=selected;load(result.guide);select(index);if(result.warning)setError(result.warning);}
  })}/>}

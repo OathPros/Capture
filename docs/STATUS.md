@@ -1,3 +1,23 @@
+# Current work — 0.5.0-preview.1 (unreleased)
+
+## Implemented
+- Native local PNG/JPEG/BMP chooser behind the allowlisted `asset.import` bridge. No browser-supplied filesystem paths. Checks project identity, idle state, file size, decoded dimensions and managed PNG validation. Re-encodes pixels without source metadata, saves a checksummed local asset and rolls back the new file on save failure.
+- Add image step inserts after the selected step, including empty guides. Existing steps offer Add image, Replace image and Remove image. Replacement preserves text, resets old annotations/crop/cuts and marks the step for review. Ordinary undo retains the managed asset manifest and restores attachments/markup. Native pixel sanitization still clears history.
+- Imported images use the existing annotation, preview, autosave, clipboard and export pipelines. No schema change. Source file stays unchanged; remove/replace are reversible edits and do not securely delete old project assets.
+- App/bridge/package/CI artifact versions advanced to 0.5.0-preview.1; published download links still refer to the existing released installer.
+
+## Validation in this Linux session
+- .NET 10.0.403 solution Release build passes with zero warnings/errors; Windows test sources compile.
+- 61 core tests and 8 editor unit tests pass; TypeScript/Vite production build passes.
+- Browser suite: 12 passed, one skipped (standalone HTML export sample not generated in this session). New checks cover insertion/attachment/replacement/removal, save/reopen, manifest-preserving undo/redo, cancellation, invalid imports and save failure/retry.
+- Added six Windows image import cases: PNG/JPEG/BMP normalization/persistence/portable roundtrip, invalid and oversized rejection, and save rollback. These have compiled but have NOT run on Linux.
+
+## Unverified / next gates
+- Run Windows CI and the native image import tests, installer and packaged WebView2 smoke checks before publishing. Native chooser interaction, GDI decoding and installed-app behavior have not been tested here.
+- Complete the Version 5 image insertion checks in MANUAL-TESTS.md. No installer or release has been published for this version.
+
+---
+
 # Current milestone
 Version 4 quality-of-life update: meaningful capture text, fitted highlights, real strip cuts, and direct clipboard exports.
 
@@ -16,7 +36,7 @@ Version 4 quality-of-life update: meaningful capture text, fitted highlights, re
 - The exact Word clipboard RTF opened and rendered in LibreOffice with its screenshot and bold field labels. Microsoft Word's paste preference can override rich formatting; use Keep Source Formatting.
 
 ## Remaining limits
-Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, manual image insertion, signing, WGC replacement and hosted integrations remain unfinished.
+Full real-world capture/UIA timing, mixed DPI, private-window detection and app-specific provider quirks remain manual validation. Missing accessibility metadata produces a review-marked fallback. Crop/cuts retain originals in editable projects; use permanent solid redaction for secrets. PDF, signing, WGC replacement and hosted integrations remain unfinished.
 
 ## Installer preview 0.4.0-preview.2 — released
 - PR #1 merged; Windows main run 41833444333 passed all 95 existing tests, packaging, installed-app WebView2 screenshot decoding, installation, repeat installation and uninstall with user-file preservation.

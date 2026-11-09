@@ -1,3 +1,13 @@
+# YU Capture 0.5.0-preview.1 — Add images to steps (unreleased)
+
+- **Add image step** inserts a local image after the selected step, including in an empty guide.
+- **Add image** attaches a picture to an existing text step. **Replace image** keeps titles, instructions and notes and resets the previous image markup/crop/cuts. **Remove image** returns the step to text only.
+- Undo/Redo restores attachments and previous markup. Images work with the existing annotation editor, autosave, clipboard, document exports and portable packages.
+- PNG, JPEG and BMP inputs are normalized to managed PNGs without source metadata. Limits: 64 MB per input, 8,294,400 pixels and 32,768 pixels per side. Images stay on the computer; the original external file is unchanged.
+- No guide schema change. Windows chooser, decoding and installer checks remain pending; this version has not been published.
+
+---
+
 # YU Capture 0.4.0-preview.2 — Windows installer
 
 Download `YU-Capture-0.4.0-preview.2-Setup-x64.exe`, open it, and choose Install. Launch YU Capture from the final setup screen or Windows Start menu. No ZIP extraction or separate .NET installation is required.

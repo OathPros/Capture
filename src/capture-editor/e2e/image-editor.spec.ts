@@ -11,7 +11,10 @@ async function host(page:Page,missing=false){
    (window as any).__commands.push(m.type);let result:any={},error='';if(m.type==='editor.ready')result={guide};
    if(m.type==='asset.read'){if((window as any).__imageMissing)error='This screenshot file is missing.';else result={url:'data:image/png;base64,'+png,width:1600,height:800};}
    if(m.type==='clipboard.copy'){if((window as any).__failCopy)error='The Windows clipboard is busy. Try copying again.';else{(window as any).__copies.push({format:m.payload.format,title:guide.steps[0].title,fields:guide.steps[0].titleFields||[]});result={copied:true};}}
-   if(m.type==='project.save'){guide=m.payload;(window as any).__guide=guide;result={saved:true};}if(m.type==='project.list')result=[guide];if(m.type==='project.open')result=guide;
+   if(m.type==='asset.import'){if((window as any).__failImport)error='This image could not be decoded.';else if((window as any).__cancelImport)result=null;else{result={...guide.assets[0],id:crypto.randomUUID()};guide={...guide,assets:[...guide.assets,result]};}}
+   if(m.type==='project.save' && JSON.stringify(m.payload.assets)!==JSON.stringify(guide.assets))error='Project or asset identity changed.';
+   if(m.type==='project.save' && (window as any).__failSave)error='Save failed — retry Save';
+   if(m.type==='project.save' && !error){guide=m.payload;(window as any).__guide=guide;result={saved:true};}if(m.type==='project.list')result=[guide];if(m.type==='project.open')result=guide;
    if(m.type==='asset.applyPixelEdits'){guide={...guide,assets:guide.assets.map((a:any)=>({...a,id:'sanitized',sha256:'1'.repeat(64)})),steps:guide.steps.map((s:any)=>({...s,assetId:'sanitized',annotations:s.annotations.filter((a:any)=>!['blur','redact'].includes(a.kind))}))};(window as any).__guide=guide;result={guide};}
    setTimeout(()=>listeners.forEach(fn=>fn({data:{requestId:m.requestId,ok:!error,result,error}})),0);
   }}};
@@ -66,4 +69,54 @@ test('bold fields and both clipboard buttons save first without opening a file d
 test('clipboard failure retains the edited guide',async({page})=>{
  await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await page.getByLabel('Step title',{exact:true}).fill('Preserve this edit');await page.evaluate(()=>(window as any).__failCopy=true);
  await page.getByRole('button',{name:'Copy steps for Word',exact:true}).click();await expect(page.getByRole('alert')).toContainText('clipboard is busy');await expect(page.getByLabel('Step title',{exact:true})).toHaveValue('Preserve this edit');
+});
+
+test('add and replace images preserve text, undo history, manifest and saved projects',async({page})=>{
+ await host(page);
+ await page.getByLabel('Step title',{exact:true}).fill('Keep my instructions');
+ await draw(page,'Rectangle');
+ await page.getByRole('button',{name:'Replace image',exact:true}).click();
+ await expect(page.getByRole('status')).toHaveText('Saved locally');
+ let g=await saved(page);const replacement=g.steps[0].assetId;
+ expect(replacement).not.toBe('image');expect(g.assets).toHaveLength(2);expect(g.steps[0].annotations).toEqual([]);
+ expect(g.steps[0].title).toBe('Keep my instructions');expect(g.steps[0].instruction).toBe('Use synthetic content.');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();
+ g=await saved(page);expect(g.steps[0].assetId).toBe('image');expect(g.steps[0].annotations).toHaveLength(1);expect(g.assets).toHaveLength(2);
+ await page.getByRole('button',{name:'Redo',exact:true}).click();
+ g=await saved(page);expect(g.steps[0].assetId).toBe(replacement);
+ await page.getByRole('button',{name:'+ Add image step',exact:true}).click();
+ await expect(page.locator('aside li')).toHaveCount(2);
+ g=await saved(page);expect(g.steps[1].title).toBe('New image step');expect(g.steps[1].needsReview).toBe(true);expect(g.assets).toHaveLength(3);
+ await page.getByRole('button',{name:'Remove image',exact:true}).click();
+ g=await saved(page);expect(g.steps[1].assetId).toBeNull();
+ await page.getByRole('button',{name:'Add image',exact:true}).click();
+ g=await saved(page);expect(g.steps[1].assetId).toBeTruthy();expect(g.assets).toHaveLength(4);
+ await page.getByRole('button',{name:'Projects',exact:true}).click();
+ await page.getByRole('button',{name:/Synthetic screenshot workflow/}).click();
+ await expect(page.locator('aside li')).toHaveCount(2);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();
+ await expect(page.getByRole('alert')).toHaveCount(0);
+});
+test('cancelled and invalid image imports retain edits and undo',async({page})=>{
+ await host(page);await page.getByLabel('Step title',{exact:true}).fill('Unsaved title');
+ await page.evaluate(()=>(window as any).__cancelImport=true);
+ await page.getByRole('button',{name:'+ Add image step',exact:true}).click();
+ await expect(page.getByRole('status')).toHaveText('Image selection cancelled');
+ await expect(page.locator('aside li')).toHaveCount(1);
+ await page.evaluate(()=>{(window as any).__cancelImport=false;(window as any).__failImport=true;});
+ await page.getByRole('button',{name:'Replace image',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('could not be decoded');
+ expect((await saved(page)).steps[0].title).toBe('Unsaved title');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();
+ expect((await saved(page)).steps[0].title).toBe('Annotate the screenshot');
+});
+
+test('image attachment remains editable when saving fails and can be retried',async({page})=>{
+ await host(page);
+ await page.evaluate(()=>(window as any).__failSave=true);
+ await page.getByRole('button',{name:'+ Add image step',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Save failed');
+ await expect(page.locator('aside li')).toHaveCount(2);
+ await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();
+ await page.evaluate(()=>(window as any).__failSave=false);
+ const g=await saved(page);expect(g.steps).toHaveLength(2);expect(g.steps[1].assetId).toBe(g.assets[1].id);
 });
