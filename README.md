@@ -12,7 +12,7 @@ CAPTURE records mouse interactions across Windows applications and turns them in
 4. To update, exit Capture from its tray icon and run the newer installer. To uninstall, use **Windows Settings → Apps → YU Capture**. Uninstall preserves saved projects under `%LOCALAPPDATA%\Capture`; back up full project folders before upgrades. Older app versions cannot open guides upgraded to newer schemas.
 5. This preview remains unsigned. Windows or organizational policies may block it. Follow your organization’s approval process.
 
-**Download:** [YU Capture download page](https://oathpros.github.io/Capture/) · [Windows installer](https://github.com/OathPros/Capture/releases/download/v0.5.0-preview.2/YU-Capture-0.5.0-preview.2-Setup-x64.exe). Portable ZIPs are also available on GitHub Releases for advanced users; these require manual extraction and a separately installed WebView2 runtime if missing.
+**Download:** [YU Capture download page](https://oathpros.github.io/Capture/) · [Windows installer](https://github.com/OathPros/Capture/releases/download/v0.6.0-preview.1/YU-Capture-0.6.0-preview.1-Setup-x64.exe). Portable ZIPs are also available on GitHub Releases for advanced users; these require manual extraction and a separately installed WebView2 runtime if missing.
 
 See [installer design and release checks](docs/INSTALLER.md). The optional `Capture-export-examples.zip` contains synthetic sample exports.
 

@@ -1,13 +1,15 @@
-# Workspace update — 0.6.0-preview.1 (release validation pending)
+# Current version — 0.6.0-preview.1
 
 - Fit image uses the composed image layout and both measured canvas dimensions, with no automatic upscaling. Fit width and manual zoom are distinct, and the shared local preference persists across steps/restarts outside guide metadata.
 - Bounded app shell and canvas, compact headers, collapsible step-details inspector, optional title preview, contextual annotation properties. Zoom/panning stay inside the image viewport. Native page zoom is fixed at 100% to prevent conflicting zoom layers.
 - Sidebar duplicate/delete icons, native handle drag/drop with auto-scroll and insertion feedback, keyboard selection, Alt+Up/Down reorder, Ctrl+D duplicate and scoped Delete. History snapshots retain step IDs so undo/redo restores selection; reorder preserves the selected step and normalizes order values.
-- Local TypeScript/Vite and .NET Release solution builds pass with zero warnings/errors. All 12 editor unit and 22 browser tests pass, including fit, persistence, portrait/crop, minimum window, drag/keyboard/undo, panning and scaled-pixel geometry. Dark/light workspace screenshots were inspected. Windows CI/release checks are pending before publication; actual interactive Windows DPI still needs manual verification.
+- Local TypeScript/Vite and .NET Release solution builds pass with zero warnings/errors. All 12 editor unit and 22 browser tests pass, including fit, persistence, portrait/crop, minimum window, drag/keyboard/undo, panning and scaled-pixel geometry. Dark/light workspace screenshots were inspected. Windows release run [42711494536](https://github.com/OathPros/Capture/actions/runs/42711494536) passed all 122 tests (63 core, 24 native Windows, 12 editor unit, 23 browser), packaging, packaged WebView2 decoding and installer install/reinstall/uninstall checks. Actual interactive Windows DPI still needs manual verification.
 
-- Final Windows validation initially hit a test-only race when the scaled-screen measurement ran before its next canvas loaded. The fit assertion now waits through loading; five repeated local runs pass. Final Windows rerun is pending.
+- Final Windows validation initially hit a test-only race when the scaled-screen measurement ran before its next canvas loaded. The fit assertion now waits through loading; five repeated local runs pass. The corrected check passed final Windows validation.
 
-- The initial main publish run caught another test timing race: keyboard focus was requested while Save still made the editor inert. The browser Save helper now waits for enabled controls, and the sidebar regression explicitly injects delayed saves. Publication remains gated on the next successful Windows run.
+- The initial main publish run caught another test timing race: keyboard focus was requested while Save still made the editor inert. The browser Save helper now waits for enabled controls, and the sidebar regression explicitly injects delayed saves. The corrected delayed-save check passed the final Windows release run.
+
+- PR #4 merged as `e2a6285`; test synchronization corrections are included in release commit `0c740e1`. [v0.6.0-preview.1](https://github.com/OathPros/Capture/releases/tag/v0.6.0-preview.1) is published, and download fallback links point to the new installer.
 
 ---
 
