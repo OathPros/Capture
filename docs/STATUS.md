@@ -1,9 +1,11 @@
-# Icon update — 0.5.0-preview.2 (release validation pending)
+# Current version — 0.5.0-preview.2
 
 - Preserved the user's supplied Windows icon kit in `assets/branding`; verified its seven 32-bit ICO frames and inspected the supplied PNG artwork.
 - Embedded the multi-size icon into the Windows executable and WPF resources; main/recording windows and tray use the same artwork. Tray icon handles are disposed on shutdown. Inno Setup uses the icon, and installed shortcuts/Windows Settings use the executable's icon.
 - Added supplied PNG artwork and favicon to the bundled editor and self-contained download page. Added branding assets to package/install smoke checks and existing browser theme validation.
-- Local Release solution build passes with zero warnings/errors; all seven supplied ICO image frames are present in the built EXE. Eight editor unit tests and 17 browser tests pass. Header artwork was inspected in dark/light previews; the standalone page logo/favicon decode successfully. Windows packaging, embedded WPF resource loading and installed-app checks are pending CI. Interactive taskbar/tray appearance at mixed DPI still requires Windows visual inspection.
+- Local Release solution build passes with zero warnings/errors; all seven supplied ICO image frames are present in the built EXE. Eight editor unit tests and 17 browser tests pass. Header artwork was inspected in dark/light previews; the standalone page logo/favicon decode successfully. Windows run [42654935957](https://github.com/OathPros/Capture/actions/runs/42654935957) passed all 112 tests, packaging, embedded WPF resource loading, installed-app startup and installer lifecycle checks. Interactive taskbar/tray appearance at mixed DPI still requires Windows visual inspection.
+
+- PR #3 merged as `55bf817`; [v0.5.0-preview.2](https://github.com/OathPros/Capture/releases/tag/v0.5.0-preview.2) is published. Branding-page deployment run 42654935955 passed. Download fallback links now point to the published icon release.
 
 ---
 
