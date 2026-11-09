@@ -65,3 +65,12 @@
 - Interaction: The user's explicit request supersedes the original build guide's repeated recording/export confirmation requirements. Remove disclaimer banners and application message boxes; keep operational errors inline and native file selection/overwrite protection. Discard is clearly named and immediate. Permanent image actions still state their concrete effect on originals/Undo next to the action.
 - Batch storage: Render each affected asset once, stage all sanitized files and commit metadata/cleanup intent once. Roll back new files on render/save failure. Delete originals only after commit; propagate cleanup state to the editor and block output until cleanup succeeds. Permanent edits clear history for the entire guide.
 - Evidence: Core/browser/editor tests and Linux cross-compilation pass. Actual Windows capture/compositing, global shortcut conflict/rollback, title bar and pixel execution remain manual/Windows CI gates.
+
+
+## ADR — Measured canvas fitting and shared viewing preferences
+- Date: 2026-11-09
+- Choice: Fit image takes the minimum of available width/image width, available height/image height and 100%. Measure the actual flexible stage with ResizeObserver after headers, tool settings and inspector consume their space; reserve explicit canvas margins. Fit width remains separate and may scroll vertically.
+- Viewing state: Shared validated zoom preference in localStorage, separate from guide schema, annotation geometry and exports. Image-specific transient selections reset on step changes; zoom mode persists. Source-to-screen transforms and handle sizes use the same effective scale.
+- Layout: App owns the viewport; steps, inspector and zoomed canvas have bounded scroll regions. Inspector becomes an explicit drawer on narrow windows. Contextual properties and optional title preview reclaim vertical space.
+- Step interactions: Sidebar-only Delete and duplication shortcuts avoid conflicts with text and annotation editing. Guide/history snapshots store selected step identity, while arbitrary destination reordering normalizes order without changing IDs. Drag payloads are accepted only from the current sidebar drag.
+- Verification: Browser coverage includes 21-step landscape/portrait guides at 1920×1057, 1366×768, 1400×920 and 800×600; a scaled-pixel test validates annotation coordinates. Native interactive Windows scaling remains a manual gate.

@@ -3,6 +3,7 @@ import {Annotation,AnnotationKind,Asset,Region,Step,ImageCut} from './model';
 import {request} from './bridge';
 import {Point,clamp,moveAnnotation,newAnnotation,regionBetween,resizeAnnotation} from './imageGeometry';
 import {imageLayout,projectRegion,toOriginal} from './imageLayout';
+import {ViewZoom,viewScale} from './viewZoom';
 
 type Tool='select'|'crop'|'cut'|AnnotationKind;
 const tools:{id:Tool;name:string;icon:string}[]=[
@@ -11,7 +12,7 @@ const tools:{id:Tool;name:string;icon:string}[]=[
  {id:'arrow',name:'Arrow',icon:'↗'},{id:'callout',name:'Callout',icon:'▱'},{id:'rectangle',name:'Rectangle',icon:'□'},
  {id:'ellipse',name:'Ellipse',icon:'○'},{id:'highlight',name:'Highlight',icon:'▣'}];
 const defaults:Partial<Annotation>={stroke:'#e31837',fill:'transparent',textColor:'#202833',strokeWidth:3,fontSize:28,shadow:false,blurRadius:12};
-interface Props {projectId:string;asset:Asset;step:Step;onChange(change:Partial<Step>):void;onApplyPixels():void;onUndo():void;onRedo():void;canUndo:boolean;canRedo:boolean}
+interface Props {zoom:ViewZoom;onZoom(zoom:ViewZoom):void;projectId:string;asset:Asset;step:Step;onChange(change:Partial<Step>):void;onApplyPixels():void;onUndo():void;onRedo():void;canUndo:boolean;canRedo:boolean}
 interface Drag {type:'draw'|'move'|'resize';start:Point;base?:Annotation;handle?:string;value?:Annotation|Region;kind:Tool}
 
 function textLines(text:string,width:number,fontSize:number) {
@@ -44,15 +45,19 @@ function Shape({a,width,height,source,id,onPointerDown}:{a:Annotation;width:numb
  </g>;
 }
 
-export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,onRedo,canUndo,canRedo}:Props) {
+export function ImageEditor({zoom,onZoom,projectId,asset,step,onChange,onApplyPixels,onUndo,onRedo,canUndo,canRedo}:Props) {
  const [cutAxis,setCutAxis]=useState<'horizontal'|'vertical'>('horizontal'),[cutCandidate,setCutCandidate]=useState<Region|null>(null);
  const [tool,setTool]=useState<Tool>('select'),[selected,setSelected]=useState<string|null>(null),[style,setStyle]=useState(defaults);
- const [source,setSource]=useState<string|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0),[zoom,setZoom]=useState(0);
- const [preview,setPreview]=useState<Annotation|Region|null>(null),[cropCandidate,setCropCandidate]=useState<Region|null>(null),[displayWidth,setDisplayWidth]=useState(800);
+ const [source,setSource]=useState<string|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0);
+ const [preview,setPreview]=useState<Annotation|Region|null>(null),[cropCandidate,setCropCandidate]=useState<Region|null>(null),[viewportSize,setViewportSize]=useState({width:1,height:1});
  const svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),clipboard=useRef<Annotation|null>(null);
  const uid=useId().replace(/[^a-zA-Z0-9]/g,'');
  const crop=step.crop||{x:0,y:0,width:1,height:1};const layout=imageLayout(asset.width,asset.height,step.crop,step.cuts);const view={x:0,y:0,width:layout.width,height:layout.height};
- const unit=view.width/Math.max(1,zoom?view.width*zoom:displayWidth);
+ const scale=viewScale(zoom,view.width,view.height,viewportSize.width,viewportSize.height),unit=1/scale;
+ const pan=useRef<{x:number;y:number;left:number;top:number}|null>(null);const [space,setSpace]=useState(false);
+ useEffect(()=>{const release=()=>{setSpace(false);pan.current=null;};const keyup=(e:KeyboardEvent)=>{if(e.code==='Space')release();};window.addEventListener('keyup',keyup);window.addEventListener('blur',release);return()=>{window.removeEventListener('keyup',keyup);window.removeEventListener('blur',release);};},[]);
+ function zoomBy(delta:number){onZoom(Math.max(.1,Math.min(4,Math.round((scale+delta)*100)/100)));}
+
  const chosen=step.annotations.find(a=>a.id===selected);
  const properties={...defaults,...style,...chosen};
  const pendingPixels=step.annotations.filter(a=>a.kind==='blur'||a.kind==='redact').length;
@@ -67,7 +72,7 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
  },[projectId,asset.id,asset.sha256,retry]);
  useEffect(()=>{setSelected(null);setPreview(null);setCropCandidate(null);setCutCandidate(null);drag.current=null;setTool('select');},[step.id,asset.id]);
  useEffect(()=>{
-  const observer=new ResizeObserver(()=>{if(viewport.current)setDisplayWidth(Math.max(1,viewport.current.clientWidth-24));});
+  const observer=new ResizeObserver(()=>{const node=viewport.current;if(node)setViewportSize(old=>old.width===node.clientWidth&&old.height===node.clientHeight?old:{width:node.clientWidth,height:node.clientHeight});});
   if(viewport.current)observer.observe(viewport.current);return()=>observer.disconnect();
  },[source]);
  function point(e:React.PointerEvent):Point {
@@ -115,8 +120,9 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
  function paste(){if(!clipboard.current)return;const a=moveAnnotation({...clipboard.current,id:crypto.randomUUID()},.02,.02);onChange({annotations:[...step.annotations,a]});setSelected(a.id);setTool('select');}
  function keyboard(e:React.KeyboardEvent) {
   if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement||e.target instanceof HTMLSelectElement)return;
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.target instanceof SVGElement){if(['+','=','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0')onZoom('fit');else zoomBy(e.key==='-'?-.1:.1);}}
   if(e.key==='Escape'){drag.current=null;setPreview(null);setCropCandidate(null);setCutCandidate(null);setSelected(null);setTool('select');}
-  if((e.key==='Delete'||e.key==='Backspace')&&chosen){e.preventDefault();remove();}
+  if((e.key==='Delete'||e.key==='Backspace')&&chosen){e.preventDefault();e.stopPropagation();remove();}
   if(e.ctrlKey||e.metaKey){if(e.key==='c'){e.preventDefault();copy();}if(e.key==='x'){e.preventDefault();copy(true);}if(e.key==='v'){e.preventDefault();paste();}}
  }
  const drawn=step.annotations.map(a=>(preview&&'id'in preview&&preview.id===a.id)?preview:a);
@@ -130,10 +136,10 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
  function projected(a:Annotation):Annotation|null {const b=projectRegion(a,asset.width,asset.height,layout);return b.width>0&&b.height>0?{...a,x:b.x/view.width,y:b.y/view.height,width:b.width/view.width,height:b.height/view.height}:null;}
 
  return <section className="image-editor" aria-label="Screenshot tools" onKeyDown={keyboard}>
-  <div className="image-editor-heading"><strong>Screenshot editor</strong><span>{Math.round(view.width)} × {Math.round(view.height)} px</span><label>Zoom<select aria-label="Screenshot zoom" value={zoom} onChange={e=>setZoom(Number(e.target.value))}><option value={0}>Fit</option>{[.5,.75,1,1.5,2,3].map(z=><option key={z} value={z}>{z*100}%</option>)}</select></label></div>
+  <div className="image-editor-heading"><strong>Screenshot editor</strong><span>{Math.round(view.width)} × {Math.round(view.height)} px</span><div className="zoom-controls"><button aria-label="Zoom out" disabled={scale<=.1} onClick={()=>zoomBy(-.1)}>−</button><label>Zoom<select aria-label="Screenshot zoom" value={zoom} onChange={e=>onZoom(e.target.value==='fit'||e.target.value==='width'?e.target.value:Number(e.target.value))}><option value="fit">Fit image</option><option value="width">Fit width</option>{[...new Set([.1,.25,.5,.75,1,1.5,2,3,4,...(typeof zoom==='number'?[zoom]:[])])].sort((a,b)=>a-b).map(z=><option key={z} value={z}>{Math.round(z*100)}%</option>)}</select></label><button aria-label="Zoom in" disabled={scale>=4} onClick={()=>zoomBy(.1)}>+</button><span className="zoom-percent" aria-label="Actual screenshot scale">{Math.round(scale*100)}%</span></div></div>
   <div role="toolbar" aria-label="Image tools" className="image-tools">{tools.map(t=><button type="button" key={t.id} aria-pressed={tool===t.id} title={t.name==='Blur'?'Blur softens pixels; use Redact to remove sensitive information.':`${t.name}: drag on the screenshot`} onClick={()=>{setTool(t.id);setCropCandidate(null);setCutCandidate(null);if(t.id!=='select')setSelected(null);}}><span aria-hidden="true">{t.icon}</span>{t.name}</button>)}</div>
   {tool==='cut'&&<label className="cut-direction">Cut direction<select aria-label="Cut direction" value={cutAxis} onChange={e=>{setCutAxis(e.target.value as 'horizontal'|'vertical');setCutCandidate(null);}}><option value="horizontal">Horizontal strip</option><option value="vertical">Vertical strip</option></select></label>}
-  <div className="tool-properties">
+  {(tool!=='select'||chosen)&&<div className="tool-properties">
    <label>Outline<input aria-label="Outline colour" type="color" value={properties.stroke} onChange={e=>patch({stroke:e.target.value})}/></label>
    <label>Width<input aria-label="Outline width" type="number" min="1" max="40" value={properties.strokeWidth} onChange={e=>patch({strokeWidth:clamp(Number(e.target.value)||1,1,40)})}/></label>
    <label>Fill<input aria-label="Fill colour" type="color" value={properties.fill==='transparent'?'#ffffff':properties.fill} onChange={e=>patch({fill:e.target.value})}/></label>
@@ -142,7 +148,7 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
    <label>Font size<input aria-label="Font size" type="number" min="8" max="256" value={properties.fontSize} onChange={e=>patch({fontSize:clamp(Number(e.target.value)||8,8,256)})}/></label>
    <label className="inline-check"><input aria-label="Shadow" type="checkbox" checked={properties.shadow} onChange={e=>patch({shadow:e.target.checked})}/>Shadow</label>
    {(tool==='blur'||chosen?.kind==='blur')&&<label>Blur strength<input aria-label="Blur strength" type="range" min="2" max="64" value={properties.blurRadius} onChange={e=>patch({blurRadius:Number(e.target.value)})}/></label>}
-  </div>
+  </div>}
   {(chosen?.kind==='text'||chosen?.kind==='callout')&&<label className="annotation-text">Annotation text<textarea aria-label="Annotation text" value={chosen.text||''} maxLength={4000} onChange={e=>patch({text:e.target.value})}/></label>}
   <div className="image-actions"><button disabled={!canUndo} onClick={onUndo}>Undo edit</button><button disabled={!canRedo} onClick={onRedo}>Redo edit</button><button disabled={!chosen} onClick={()=>copy()}>Copy</button><button disabled={!chosen} onClick={()=>copy(true)}>Cut selection</button><button onClick={paste}>Paste</button><button disabled={!chosen} onClick={remove}>Delete annotation</button>{step.crop&&<button onClick={()=>onChange({crop:null})}>Reset crop</button>}
    {!!step.cuts?.length&&<button onClick={()=>onChange({cuts:[]})}>Reset cuts</button>}
@@ -150,9 +156,14 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
    {cropCandidate&&<><button className="primary" onClick={()=>{onChange({crop:cropCandidate});setCropCandidate(null);setTool('select');}}>Apply crop</button><button onClick={()=>setCropCandidate(null)}>Cancel crop</button></>}
    {pendingPixels>0&&<button className="pixel-apply" onClick={onApplyPixels}>Apply blur/redaction permanently</button>}
   </div>
-  <p className="tool-hint">{tool==='select'?'Select an annotation to move it or resize its handles. Use Undo / Redo for reversible edits.':tool==='cut'?'Drag a full-width or full-height strip to remove, then Apply cut. The remaining image joins together. ':tool==='crop'?'Drag the region to keep, then choose Apply crop. Reset crop restores the full image.':tool==='blur'?'Drag to blur an area.':'Drag on the screenshot to add '+tool+'.'}</p>
+  <p className="tool-hint" title="Hold Space and drag, or middle-drag, to pan a zoomed image.">{tool==='select'?'Select an annotation to move it or resize its handles. Use Undo / Redo for reversible edits.':tool==='cut'?'Drag a full-width or full-height strip to remove, then Apply cut. The remaining image joins together. ':tool==='crop'?'Drag the region to keep, then choose Apply crop. Reset crop restores the full image.':tool==='blur'?'Drag to blur an area.':'Drag on the screenshot to add '+tool+'.'}</p>
   {error?<div className="image-error" role="alert"><strong>Screenshot unavailable</strong><p>{error}</p><button onClick={()=>setRetry(r=>r+1)}>Retry screenshot</button></div>:!source?<div className="image-loading" role="status">Loading screenshot…</div>:
-  <div className="image-stage" data-tool={tool} ref={viewport}><svg ref={svg} role="img" aria-label="Screenshot annotation canvas" tabIndex={0} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} width={view.width} height={view.height} style={{width:zoom?view.width*zoom:'100%',height:'auto',cursor:tool==='select'?'default':'crosshair'}} onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{drag.current=null;setPreview(null);}}>
+  <div className="image-stage" data-tool={tool} ref={viewport}
+   onKeyDown={e=>{if(e.code==='Space'&&e.target instanceof SVGElement){e.preventDefault();setSpace(true);}}}
+   onPointerDownCapture={e=>{if(e.button===1||space){e.preventDefault();e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);pan.current={x:e.clientX,y:e.clientY,left:e.currentTarget.scrollLeft,top:e.currentTarget.scrollTop};}}}
+   onPointerMoveCapture={e=>{if(pan.current){e.preventDefault();e.stopPropagation();e.currentTarget.scrollLeft=pan.current.left-(e.clientX-pan.current.x);e.currentTarget.scrollTop=pan.current.top-(e.clientY-pan.current.y);}}}
+   onPointerUpCapture={e=>{if(pan.current){e.stopPropagation();pan.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}}} onPointerCancel={()=>{pan.current=null;}}
+  ><div className="image-surface" style={{width:Math.max(viewportSize.width,view.width*scale+32),height:Math.max(viewportSize.height,view.height*scale+32)}}><svg ref={svg} role="img" aria-label="Screenshot annotation canvas" tabIndex={0} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} width={view.width} height={view.height} style={{width:view.width*scale,height:view.height*scale,cursor:space?'grab':tool==='select'?'default':'crosshair'}} onPointerDown={start} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{drag.current=null;setPreview(null);}}>
    <defs><g id={`${uid}-source`}><image href={source} width={asset.width} height={asset.height} onLoad={()=>{void request('asset.previewReady',{projectId,assetId:asset.id,width:asset.width,height:asset.height}).catch(()=>{});}} onError={()=>setError('The PNG could not be decoded. Restore the screenshot from a complete project backup.')}/>
     {drawn.filter(a=>a.kind==='blur'||a.kind==='redact').map((a,i)=><Shape key={a.id} a={a} width={asset.width} height={asset.height} source={source} id={`${uid}-pixel-${i}`}/>)}
     {preview&&'id'in preview&&drag.current?.type==='draw'&&(preview.kind==='blur'||preview.kind==='redact')&&<Shape a={preview} width={asset.width} height={asset.height} source={source} id={`${uid}-pixel-draft`}/>}
@@ -162,7 +173,7 @@ export function ImageEditor({projectId,asset,step,onChange,onApplyPixels,onUndo,
    {preview&&'id'in preview&&drag.current?.type==='draw'&&preview.kind!=='blur'&&preview.kind!=='redact'&&projected(preview)&&<Shape a={projected(preview)!} width={view.width} height={view.height} source={source} id={`${uid}-draft`}/>}
    {cropBox&&<rect data-testid="crop-region" x={cropBox.x} y={cropBox.y} width={cropBox.width} height={cropBox.height} fill="#2366c222" stroke="#2366c2" strokeWidth={2*unit} strokeDasharray={`${6*unit} ${4*unit}`} pointerEvents="none"/>}
    {selectionBox&&tool==='select'&&<g data-testid="selection-handles"><rect x={selectionBox.x} y={selectionBox.y} width={selectionBox.width} height={selectionBox.height} fill="none" stroke="#2366c2" strokeWidth={1.5*unit} strokeDasharray={`${4*unit} ${3*unit}`} pointerEvents="none"/>{[['nw',0,0],['n',.5,0],['ne',1,0],['e',1,.5],['se',1,1],['s',.5,1],['sw',0,1],['w',0,.5]].map(([handle,x,y])=><rect key={handle} data-handle={handle} x={(selectionBox.x+selectionBox.width*Number(x))-5*unit} y={(selectionBox.y+selectionBox.height*Number(y))-5*unit} width={10*unit} height={10*unit} fill="white" stroke="#2366c2" strokeWidth={1.5*unit} style={{cursor:`${handle}-resize`}} onPointerDown={e=>resize(e,String(handle))}/>)}</g>}
-  </svg></div>}
+  </svg></div></div>}
   {chosen&&<details className="annotation-geometry"><summary>Exact position and size (%)</summary><div>{(['x','y','width','height']as const).map(key=><label key={key}>{key}<input aria-label={`Annotation ${key}`} type="number" min="0" max="100" step=".1" value={Math.round(chosen[key]*1000)/10} onChange={e=>{let a={...chosen,[key]:Number(e.target.value)/100};a.width=clamp(a.width,.001,1);a.height=clamp(a.height,.001,1);a.x=clamp(a.x,0,1-a.width);a.y=clamp(a.y,0,1-a.height);onChange({annotations:step.annotations.map(old=>old.id===a.id?a:old)});}}/></label>)}</div></details>}
  </section>;
 }

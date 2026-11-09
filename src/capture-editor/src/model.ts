@@ -5,8 +5,12 @@ export interface Annotation extends Region { id: string; kind: AnnotationKind; s
 export interface Step { id: string; order: number; title: string; instruction: string; notes: string; assetId: string | null; annotations: Annotation[]; needsReview: boolean; crop?:Region|null; cuts?:ImageCut[];titleFields?:string[] }
 export interface Asset { id: string; relativePath: string; mimeType: string; width: number; height: number; sha256: string }
 export interface Guide { schemaVersion: string; id: string; title: string; summary: string; createdAt: string; updatedAt: string; steps: Step[]; assets: Asset[]; pendingAssetDeletes?:string[] }
-export function moveStep(guide: Guide, index: number, delta: number): Guide {
- const to = index + delta; if (to < 0 || to >= guide.steps.length) return guide;
- const steps = [...guide.steps]; [steps[index], steps[to]] = [steps[to], steps[index]];
- return { ...guide, steps: steps.map((s, i) => ({ ...s, order: i + 1 })) };
+export function moveStepTo(guide: Guide, id:string, to:number):Guide {
+ const from=guide.steps.findIndex(s=>s.id===id);
+ if(from<0||!Number.isInteger(to)||to<0||to>=guide.steps.length||to===from)return guide;
+ const steps=[...guide.steps];const [step]=steps.splice(from,1);steps.splice(to,0,step);
+ return {...guide,steps:steps.map((s,i)=>({...s,order:i+1}))};
+}
+export function moveStep(guide:Guide,index:number,delta:number):Guide {
+ return guide.steps[index]?moveStepTo(guide,guide.steps[index].id,index+delta):guide;
 }

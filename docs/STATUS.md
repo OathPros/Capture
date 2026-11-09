@@ -1,3 +1,14 @@
+# Workspace update — 0.6.0-preview.1 (release validation pending)
+
+- Fit image uses the composed image layout and both measured canvas dimensions, with no automatic upscaling. Fit width and manual zoom are distinct, and the shared local preference persists across steps/restarts outside guide metadata.
+- Bounded app shell and canvas, compact headers, collapsible step-details inspector, optional title preview, contextual annotation properties. Zoom/panning stay inside the image viewport. Native page zoom is fixed at 100% to prevent conflicting zoom layers.
+- Sidebar duplicate/delete icons, native handle drag/drop with auto-scroll and insertion feedback, keyboard selection, Alt+Up/Down reorder, Ctrl+D duplicate and scoped Delete. History snapshots retain step IDs so undo/redo restores selection; reorder preserves the selected step and normalizes order values.
+- Local TypeScript/Vite and .NET Release solution builds pass with zero warnings/errors. All 12 editor unit and 22 browser tests pass, including fit, persistence, portrait/crop, minimum window, drag/keyboard/undo, panning and scaled-pixel geometry. Dark/light workspace screenshots were inspected. Windows CI/release checks are pending before publication; actual interactive Windows DPI still needs manual verification.
+
+- Final Windows validation initially hit a test-only race when the scaled-screen measurement ran before its next canvas loaded. The fit assertion now waits through loading; five repeated local runs pass. Final Windows rerun is pending.
+
+---
+
 # Current version — 0.5.0-preview.2
 
 - Preserved the user's supplied Windows icon kit in `assets/branding`; verified its seven 32-bit ICO frames and inspected the supplied PNG artwork.

@@ -50,3 +50,12 @@ PDF and hosted integrations are not implemented; do not mark those specification
 - After installing 0.5.0-preview.2, check the EXE, Start menu/optional desktop shortcut, taskbar/Alt+Tab, main window, system tray, recording toolbar, setup wizard and Windows Settings uninstall entry.
 - Compare small and large icons at 100%, 150% and 200% Windows scaling, in light and dark taskbar themes. Windows can cache an old pinned shortcut icon; unpin/re-pin if needed.
 - Check the editor header and browser favicon, plus the download-page header/favicon. Confirm the supplied artwork has no additional opaque background.
+
+
+## Workspace fitting — 0.6.0-preview.1
+1. Open a long guide with landscape, portrait and cropped/cut screenshots. Fit image should contain the entire image without canvas/page scrolling at 800×600, laptop and full-screen sizes. Resize, open/close Step details, select tools and expand exact geometry; Fit must recalculate.
+2. Choose 50%, switch steps, reopen Capture and verify the percentage persists. Switch to Fit image and verify the mode persists while actual scale changes per image. Fit width should fill width and deliberately allow vertical scrolling. Confirm copied/file exports retain their original edited pixel dimensions.
+3. Pan at 200% using Space-drag and the middle button; release capture outside the canvas and on focus loss. Verify no accidental annotations or stuck pan state. Test +/−/0 with canvas focus; Ctrl+S and both global capture hotkeys must retain their behavior.
+4. Duplicate/delete through sidebar icons, keyboard and drag reorder across a long scrolling list. Check before/after insertion, self-drop/cancel, beginning/end moves, sequential order and stable selection. Undo/Redo must restore selection, including a deleted step. Restart/reopen and verify order.
+5. Delete in titles, instruction text and selected annotations must never delete a step. Sidebar Delete should affect the focused row only. Verify keyboard focus after deleting the last/only step, after duplication and after undo. Check screen-reader labels, focus outlines and narrow-window details drawer.
+6. Repeat on Windows at 100%, 125%, 150% and 200% scaling and across mixed-DPI monitors. Browser scaled-pixel checks do not establish native WebView2/Windows DPI behavior.
