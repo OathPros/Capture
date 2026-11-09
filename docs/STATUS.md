@@ -7,6 +7,8 @@
 
 - Final Windows validation initially hit a test-only race when the scaled-screen measurement ran before its next canvas loaded. The fit assertion now waits through loading; five repeated local runs pass. Final Windows rerun is pending.
 
+- The initial main publish run caught another test timing race: keyboard focus was requested while Save still made the editor inert. The browser Save helper now waits for enabled controls, and the sidebar regression explicitly injects delayed saves. Publication remains gated on the next successful Windows run.
+
 ---
 
 # Current version — 0.5.0-preview.2

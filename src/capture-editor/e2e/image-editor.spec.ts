@@ -43,7 +43,7 @@ async function host(page:Page,missing=false,stepCount=1){
    if(m.type==='project.save' && (window as any).__failSave)error='Save failed — retry Save';
    if(m.type==='project.save' && !error){guide=m.payload;(window as any).__guide=guide;result={saved:true};}if(m.type==='project.list')result=[guide];if(m.type==='project.open')result=guide;
    if(m.type==='asset.applyPixelEdits'){guide={...guide,assets:guide.assets.map((a:any)=>({...a,id:'sanitized',sha256:'1'.repeat(64)})),steps:guide.steps.map((s:any)=>({...s,assetId:'sanitized',annotations:s.annotations.filter((a:any)=>!['blur','redact'].includes(a.kind))}))};(window as any).__guide=guide;result={guide};}
-   setTimeout(()=>listeners.forEach(fn=>fn({data:{requestId:m.requestId,ok:!error,result,error}})),0);
+   setTimeout(()=>listeners.forEach(fn=>fn({data:{requestId:m.requestId,ok:!error,result,error}})),m.type==='project.save'?((window as any).__saveDelay||0):0);
   }}};
  },{png,missing,stepCount,portrait:readFileSync(resolve(process.cwd(),'../../tests/fixtures/portrait.png')).toString('base64')});await page.goto('/');
 }
@@ -51,7 +51,7 @@ async function draw(page:Page,tool:string,start={x:.15,y:.15},end={x:.4,y:.4}){
  await page.getByRole('button',{name:tool,exact:true}).click();const canvas=page.getByRole('img',{name:'Screenshot annotation canvas'});await canvas.scrollIntoViewIfNeeded();const b=(await canvas.boundingBox())!;
  await page.mouse.move(b.x+b.width*start.x,b.y+b.height*start.y);await page.mouse.down();await page.mouse.move(b.x+b.width*end.x,b.y+b.height*end.y,{steps:5});await page.mouse.up();
 }
-async function saved(page:Page){await page.getByRole('button',{name:'Save',exact:true}).click();return page.evaluate(()=>(window as any).__guide);}
+async function saved(page:Page){await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByRole('button',{name:'Save',exact:true})).toBeEnabled();return page.evaluate(()=>(window as any).__guide);}
 test('native screenshot loads and supports drawing, moving, resizing, styling and clipboard undo',async({page})=>{
  await host(page);await expect(page.getByRole('img',{name:'Screenshot annotation canvas'})).toBeVisible();await expect.poll(()=>page.evaluate(()=>(window as any).__commands.includes('asset.previewReady'))).toBe(true);
  await draw(page,'Rectangle');await expect(page.locator('[data-kind=rectangle]')).toHaveCount(1);await page.getByLabel('Outline width',{exact:true}).fill('8');await page.getByLabel('Shadow',{exact:true}).check();
@@ -254,7 +254,7 @@ test('zoom preference survives step changes and reload, while crop and tool chan
  const g=await saved(page);expect(g.steps[0].crop).toBeNull();expect(g).not.toHaveProperty('zoom');expect(g.steps[0]).not.toHaveProperty('zoom');
 });
 test('sidebar drag, keyboard reorder, duplicate and delete preserve selection, order and undo',async({page})=>{
- await page.setViewportSize({width:1440,height:1000});await host(page,false,6);
+ await page.setViewportSize({width:1440,height:1000});await host(page,false,6);await page.evaluate(()=>(window as any).__saveDelay=150);
  await page.locator('aside li .step-select').nth(1).click();
  await page.getByRole('button',{name:'Reorder step 1',exact:true}).dragTo(page.locator('aside li').nth(3),{targetPosition:{x:80,y:45}});
  let g=await saved(page);expect(g.steps.map((s:any)=>s.title)).toEqual(['Action 2','Action 3','Action 4','Action 1','Action 5','Action 6']);
