@@ -1,4 +1,4 @@
-# Current work — 0.5.0-preview.1 (unreleased)
+# Current version — 0.5.0-preview.1
 
 ## Implemented
 - Native local PNG/JPEG/BMP chooser behind the allowlisted `asset.import` bridge. No browser-supplied filesystem paths. Checks project identity, idle state, file size, decoded dimensions and managed PNG validation. Re-encodes pixels without source metadata, saves a checksummed local asset and rolls back the new file on save failure.
@@ -16,11 +16,11 @@
 - .NET 10.0.403 solution Release build passes with zero warnings/errors; Windows test sources compile.
 - 63 core tests and 8 editor unit tests pass; TypeScript/Vite production build passes.
 - 17 browser tests pass, none skipped. Includes screenshot attachment/new steps/undo, selection flush, independent shortcuts, theme persistence, multi-image/shared-step bulk apply, export continuation, failure/cleanup retry and offline standalone HTML. Dark/light screenshot previews inspected.
-- Six Windows image import cases and two new Windows bulk pixel cases compile but have NOT run on Linux. Bulk cases check shared pixels and rollback when a later image fails.
+- Windows release run [42651605653](https://github.com/OathPros/Capture/actions/runs/42651605653) passed all 112 tests: 63 core, 24 native Windows, 8 editor unit and 17 browser. This includes image import/rollback, shared pixel sanitization and bulk rollback. Packaging, native packaged-WebView2 preview and installed-app install/reinstall/uninstall with user-file preservation all passed.
 
 ## Unverified / next gates
-- Run Windows CI, native image import/pixel tests, installer and packaged WebView2 smoke checks before publishing. Native file pickers, actual monitor capture, independent global hotkeys, compositor hiding, DPI/multi-monitor alignment and native theme appearance have not been tested here.
-- Complete the Version 5 checks in MANUAL-TESTS.md. No installer or release has been published for this version.
+- Interactive native file pickers, actual monitor capture, independent global shortcut behavior, compositor hiding, DPI/multi-monitor alignment and native theme appearance still need manual Windows validation; CI does not establish those behaviors.
+- Complete the Version 5 interactive checks in MANUAL-TESTS.md. PR #2 merged as `03654ab`; [v0.5.0-preview.1](https://github.com/OathPros/Capture/releases/tag/v0.5.0-preview.1) is published with installer, portable ZIP and synthetic export examples. Download fallback links point to this published installer.
 
 ---
 

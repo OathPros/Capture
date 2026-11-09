@@ -1,6 +1,6 @@
 # YU Capture download page
 
-The repository-root `index.html` is a standalone, responsive download page. Without JavaScript it links directly to the published v0.4.0-preview.2 Windows installer. When JavaScript is available, it retrieves public GitHub releases (including previews), selects the most recently published release with a Windows x64 package and prefers its Setup EXE over its portable ZIP, and displays earlier downloadable releases. Publishing a new GitHub release updates the page automatically; no HTML edit is required. It shows up to 500 releases and links to the complete GitHub archive.
+The repository-root `index.html` is a standalone, responsive download page. Without JavaScript it links directly to the published v0.5.0-preview.1 Windows installer. When JavaScript is available, it retrieves public GitHub releases (including previews), selects the most recently published release with a Windows x64 package and prefers its Setup EXE over its portable ZIP, and displays earlier downloadable releases. Publishing a new GitHub release updates the page automatically; no HTML edit is required. It shows up to 500 releases and links to the complete GitHub archive.
 
 ## Put it online
 
@@ -16,4 +16,4 @@ Publish the installer as `YU-Capture-<version>-Setup-x64.exe`; the portable fall
 
 ## Verification
 
-Inline JavaScript syntax and simulated release loading were checked, including sorting previews, archive rendering, single-release handling, API failure and rejection of download URLs outside the repository. Live GitHub release metadata, uploaded installer asset and successful GitHub Pages deployment were verified through the connected GitHub tools. Visual browser verification was unavailable in the development environment. The static installer link is pinned to preview.2; JavaScript refreshes it from later published releases.
+Inline JavaScript syntax and simulated release loading were checked, including sorting previews, archive rendering, single-release handling, API failure and rejection of download URLs outside the repository. Live GitHub release metadata, uploaded installer asset and successful GitHub Pages deployment were verified through the connected GitHub tools. Visual browser verification was unavailable in the development environment. The static installer link is pinned to 0.5.0-preview.1; JavaScript refreshes it from later published releases.

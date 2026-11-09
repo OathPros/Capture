@@ -28,12 +28,12 @@ PDF and hosted integrations are not implemented; do not mark those specification
 4. Copy HTML code into a text editor and open the pasted complete document offline. Copy steps for Word directly into Word using Keep Source Formatting: confirm headings, bold field runs, notes, image order/size and Unicode. Keep Text Only is expected to omit images. Verify no export save dialog/file is needed. Try a busy clipboard and verify edits remain intact.
 
 
-## Version 5 image insertion — Windows validation pending
+## Version 5 image insertion — interactive Windows validation pending
 1. Create an empty guide and choose Add image step. Import a local PNG, JPEG and BMP. Verify the native chooser, local preview and insertion after the selected step. Cancel the chooser and check no step was added.
 2. Add image to an existing text step, then replace a captured image. Confirm text stays intact, previous annotations/crop/cuts clear, the step needs review, and Undo/Redo restores the correct image and markup. Remove image, undo, save, exit and reopen.
 3. Delete/move the original external file after import; reopen the guide and verify the managed image still loads. Annotate/crop/redact it and check Word/HTML/Markdown/clipboard and portable roundtrip.
 4. Choose invalid, oversized and unavailable files. Check errors preserve text and undo history. Simulate disk/save failure, retry Save and verify the last saved guide remains usable. Removing/replacing an image is reversible editing, not secure deletion of the old project asset.
-5. Run the Windows image import tests and installer/packaged WebView2 smoke checks before publishing 0.5.0-preview.1. Linux compilation/browser tests do not validate the native Windows chooser or GDI decoding.
+5. Windows CI run 42651605653 passed the image import, native pixel, installer and packaged WebView2 checks for 0.5.0-preview.1. Complete the interactive chooser/capture checks above; automated CI does not establish real desktop capture behavior.
 
 
 ## Version 5 screenshot and workspace checks — Windows validation pending
