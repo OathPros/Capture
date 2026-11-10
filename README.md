@@ -64,6 +64,17 @@ CI builds on Windows, runs core, Windows image-rendering, native UI Automation c
 
 Linux can compile Windows-targeted projects and run the core/editor tests, but cannot launch WPF. Install the pinned .NET SDK, then `npm ci && npm run build` under `src/capture-editor`; run `dotnet restore Capture.slnx --locked-mode`, `dotnet build Capture.slnx -c Release --no-restore`, `dotnet test tests/Capture.Core.Tests -c Release --no-restore`. Run `npm test` and `npm run test:e2e` in the editor directory. Set `CAPTURE_CHROMIUM_PATH` to an installed Chromium executable if browser downloads are unavailable.
 
+## Text2Speech download page
+
+The `text2speech/` page is deployed at `https://dxluke.com/text2speech/`.
+The Pages workflow refreshes its release catalog every 15 minutes and on
+manual dispatch. It reads stable releases from `OathPros/txt2speech`, shows
+the latest installer and any older published installers, and updates the
+DXLUKE landing-page version. Each release must include
+`Text2Speech-Setup-<version>.exe` and the matching
+`Text2Speech-Setup-<version>-SHA256.txt` asset. Verify the live page after
+the workflow succeeds.
+
 ## License
 
 No project license has been selected; no rights beyond applicable law are granted by this repository. Third-party packages retain their own licenses; see docs/DEPENDENCIES.md. Choose a project license before wider distribution.
