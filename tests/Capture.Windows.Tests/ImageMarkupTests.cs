@@ -70,8 +70,36 @@ public sealed class ImageMarkupTests : IDisposable
         Assert.False(File.Exists(secondPath));
         Assert.Equal(2, final.Assets.Count);
         using var image = Decode(await ExportImageRenderer.ReadSourceAsync(final, final.Steps[0].AssetId!, store.DirectoryFor(final.Id)));
-        Assert.Equal(Color.Black.ToArgb(), image.GetPixel(100,60).ToArgb());
-        Assert.Equal(Color.Black.ToArgb(), image.GetPixel(430,60).ToArgb());
+        var editorRedact = ColorTranslator.FromHtml("#202833").ToArgb();
+        Assert.Equal(editorRedact, image.GetPixel(100,60).ToArgb());
+        Assert.Equal(editorRedact, image.GetPixel(430,60).ToArgb());
+    }
+    [Fact] public async Task DefaultRedactMatchesTheEditorPreviewColour()
+    {
+        // The editor draws a transparent-fill redaction as #202833; exports must render exactly what the editor shows.
+        var guide=await Fixture();guide.Steps[0].Annotations=[new("redact","redact",.1,.1,.3,.3)];
+        using var rendered=Decode(await ExportImageRenderer.RenderAsync(guide,guide.Steps[0],store.DirectoryFor(guide.Id)));
+        Assert.Equal(ColorTranslator.FromHtml("#202833").ToArgb(),rendered.GetPixel(100,60).ToArgb());
+        Assert.Equal(Color.White.ToArgb(),rendered.GetPixel(400,300).ToArgb());
+    }
+    [Fact] public async Task ApplyingPixelEditsKeepsEveryOtherElementExactlyInPlace()
+    {
+        // Mass-apply must only bake blur/redact pixels: same dimensions, same crop/cuts, same annotation coordinates.
+        var guide=await Fixture(true);
+        var arrow=new Annotation("arrow","arrow",.5,.5,.25,.1){Stroke="#008000"};
+        guide.Steps[0].Annotations=[arrow,new("blur","blur",.1,.1,.2,.2)];
+        guide.Steps[0].Crop=new(.05,.05,.9,.9);guide.Steps[0].Cuts=[new("horizontal",.3,.4)];
+        var before=await ExportImageRenderer.RenderAsync(guide,guide.Steps[0],store.DirectoryFor(guide.Id));
+        var applied=await PixelEditStorage.ApplyAsync(guide,"image",store);
+        var step=applied.Steps[0];
+        Assert.Equal(guide.Assets[0].Width,applied.Assets[0].Width);Assert.Equal(guide.Assets[0].Height,applied.Assets[0].Height);
+        var kept=Assert.Single(step.Annotations);
+        Assert.Equal("arrow",kept.Kind);
+        Assert.Equal(new[]{arrow.X,arrow.Y,arrow.Width,arrow.Height},new[]{kept.X,kept.Y,kept.Width,kept.Height});
+        Assert.Equal(guide.Steps[0].Crop,step.Crop);Assert.Equal(guide.Steps[0].Cuts,step.Cuts);
+        var after=await ExportImageRenderer.RenderAsync(applied,step,store.DirectoryFor(applied.Id));
+        // The flattened export is byte-identical before and after applying: nothing moves, nothing is lost.
+        Assert.Equal(before.Png,after.Png);
     }
     [Fact] public async Task BulkRenderFailureRollsBackAllNewImagesAndPreservesSavedMetadata()
     {

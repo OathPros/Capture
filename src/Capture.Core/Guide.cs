@@ -4,15 +4,22 @@ using System.Text.Json.Serialization;
 namespace Capture.Core;
 public sealed class Guide
 {
-    public string SchemaVersion { get; set; } = "1.2.0";
+    public string SchemaVersion { get; set; } = "1.3.0";
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Title { get; set; } = "Untitled guide";
     public string Summary { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public List<Step> Steps { get; set; } = [];
+    public List<Section> Sections { get; set; } = [];
     public List<Asset> Assets { get; set; } = [];
     public List<string> PendingAssetDeletes { get; set; } = [];
+}
+public sealed class Section
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = "New section";
+    public bool RestartNumbering { get; set; }
 }
 public sealed class Step
 {
@@ -23,6 +30,7 @@ public sealed class Step
     public List<string> TitleFields { get; set; } = [];
     public string Notes { get; set; } = "";
     public string? AssetId { get; set; }
+    public Guid? SectionId { get; set; }
     public List<Annotation> Annotations { get; set; } = [];
     public bool NeedsReview { get; set; } = true;
     public CropRegion? Crop { get; set; }
@@ -46,13 +54,15 @@ public sealed record Asset(string Id, string RelativePath, string MimeType, int 
 public static class GuideJson
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
-    public static string Serialize(Guide guide) { Validate(guide); guide.SchemaVersion = "1.2.0"; return JsonSerializer.Serialize(guide, Options); }
+    public static string Serialize(Guide guide) { Validate(guide); guide.SchemaVersion = "1.3.0"; return JsonSerializer.Serialize(guide, Options); }
     public static Guide Parse(string json) { var g = JsonSerializer.Deserialize<Guide>(json, Options) ?? throw new InvalidDataException("Empty guide."); Validate(g); return g; }
     public static void Validate(Guide g)
     {
-        if (g.SchemaVersion is not ("1.0.0" or "1.1.0" or "1.2.0")) throw new InvalidDataException("Unsupported guide schema. Use a compatible Capture version.");
-        if (g.Id == Guid.Empty || g.Title is null || g.Title.Length > 1000 || g.Summary is null || g.Summary.Length > 100000 || g.Steps is null || g.Assets is null || g.Steps.Count > 10000 || g.Assets.Count > 10000 || g.PendingAssetDeletes is null || g.PendingAssetDeletes.Count > 10000) throw new InvalidDataException("Invalid guide.");
-        if (g.Steps.Select(s => s.Id).Distinct().Count() != g.Steps.Count || g.Assets.Select(a => a.Id).Distinct().Count() != g.Assets.Count || g.Assets.Select(a => a.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != g.Assets.Count) throw new InvalidDataException("Duplicate IDs.");
+        if (g.SchemaVersion is not ("1.0.0" or "1.1.0" or "1.2.0" or "1.3.0")) throw new InvalidDataException("Unsupported guide schema. Use a compatible Capture version.");
+        if (g.Id == Guid.Empty || g.Title is null || g.Title.Length > 1000 || g.Summary is null || g.Summary.Length > 100000 || g.Steps is null || g.Assets is null || g.Sections is null || g.Steps.Count > 10000 || g.Assets.Count > 10000 || g.Sections.Count > 1000 || g.PendingAssetDeletes is null || g.PendingAssetDeletes.Count > 10000) throw new InvalidDataException("Invalid guide.");
+        if (g.Steps.Select(s => s.Id).Distinct().Count() != g.Steps.Count || g.Assets.Select(a => a.Id).Distinct().Count() != g.Assets.Count || g.Sections.Select(s => s.Id).Distinct().Count() != g.Sections.Count || g.Assets.Select(a => a.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != g.Assets.Count) throw new InvalidDataException("Duplicate IDs.");
+        foreach (var section in g.Sections)
+            if (section.Id == Guid.Empty || section.Title is null || section.Title.Length > 1000) throw new InvalidDataException("Invalid section.");
         foreach (var a in g.Assets)
         {
             SafePath("/project", a.RelativePath);
@@ -68,6 +78,7 @@ public static class GuideJson
             var s = g.Steps[i];
             if (s.Id == Guid.Empty || s.Title is null || s.Instruction is null || s.Notes is null || s.Title.Length > 1000 || s.Instruction.Length > 100000 || s.Notes.Length > 100000 || s.Annotations is null || s.Annotations.Count > 1000 || s.TitleFields is null || s.TitleFields.Count>32 || s.TitleFields.Any(f=>string.IsNullOrWhiteSpace(f)||f.Length>120) || s.Cuts is null || s.Cuts.Count>32) throw new InvalidDataException("Invalid step.");
             if (s.AssetId is not null && !g.Assets.Any(a => a.Id == s.AssetId)) throw new InvalidDataException("Missing image reference.");
+            if (s.SectionId is not null && !g.Sections.Any(section => section.Id == s.SectionId)) throw new InvalidDataException("Missing section reference.");
             if(s.Crop is not null && !ValidRegion(s.Crop.X,s.Crop.Y,s.Crop.Width,s.Crop.Height)) throw new InvalidDataException("Invalid crop.");
             if(s.Annotations.Select(a=>a.Id).Distinct().Count()!=s.Annotations.Count) throw new InvalidDataException("Duplicate annotation IDs.");
             foreach (var a in s.Annotations)
@@ -119,6 +130,36 @@ public static class Coordinates
         if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException(nameof(width));
         var w = Math.Min(32 / width, 1); var h = Math.Min(32 / height, 1);
         return new(Guid.NewGuid().ToString(), "highlight", Math.Clamp((px-left)/width-w/2,0,1-w), Math.Clamp((py-top)/height-h/2,0,1-h), w, h);
+    }
+}
+public static class GuideNumbering
+{
+    /// <summary>Display number per step, in step order. Sections with RestartNumbering begin again at 1
+    /// for each contiguous run of that section; all other steps continue the shared count.</summary>
+    public static int[] StepNumbers(Guide guide)
+    {
+        var numbers = new int[guide.Steps.Count];
+        var restart = guide.Sections.Where(s => s.RestartNumbering).Select(s => s.Id).ToHashSet();
+        int shared = 0, run = 0; Guid? previous = null;
+        for (int i = 0; i < guide.Steps.Count; i++)
+        {
+            var section = guide.Steps[i].SectionId;
+            if (section is not null && restart.Contains(section.Value)) { run = previous == section ? run + 1 : 1; numbers[i] = run; }
+            else numbers[i] = ++shared;
+            previous = section;
+        }
+        return numbers;
+    }
+    /// <summary>Contiguous groups of steps sharing a section, in step order. Section is null for unsectioned runs.</summary>
+    public static IEnumerable<(Section? Section, int Start, int Count)> Runs(Guide guide)
+    {
+        for (int i = 0; i < guide.Steps.Count;)
+        {
+            var section = guide.Steps[i].SectionId;
+            int start = i;
+            while (i < guide.Steps.Count && guide.Steps[i].SectionId == section) i++;
+            yield return (section is null ? null : guide.Sections.SingleOrDefault(s => s.Id == section), start, i - start);
+        }
     }
 }
 public enum SessionState { Idle, Recording, Paused, Finalizing }

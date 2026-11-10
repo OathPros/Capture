@@ -17,9 +17,13 @@ public static class WordClipboard
             if(allBold)rtf.Append(@"\b0 ");rtf.Append(@"\par ");plain.AppendLine(text).AppendLine();
         }
         Paragraph(g.Title,40,true,allBold:true);if(!string.IsNullOrWhiteSpace(g.Summary))Paragraph(g.Summary);
-        for(int i=0;i<g.Steps.Count;i++)
+        var numbers=GuideNumbering.StepNumbers(g);
+        foreach(var (section,start,count) in GuideNumbering.Runs(g))
         {
-            var step=g.Steps[i];Paragraph($"{i+1}. {step.Title}",28,true,step.TitleFields);
+            if(section is not null)Paragraph(section.Title,26,true,allBold:true);
+            for(int i=start;i<start+count;i++)
+            {
+                var step=g.Steps[i];Paragraph($"{numbers[i]}. {step.Title}",28,true,step.TitleFields);
             if(!string.IsNullOrWhiteSpace(step.Instruction))Paragraph(step.Instruction,keep:step.AssetId is not null,fields:step.TitleFields);
             if(!string.IsNullOrWhiteSpace(step.Notes))Paragraph(step.Notes,keep:step.AssetId is not null);
             if(step.AssetId is null)continue;
@@ -30,6 +34,7 @@ public static class WordClipboard
             var hex=Convert.ToHexString(image.Png);for(int at=0;at<hex.Length;at+=128)rtf.AppendLine(hex.Substring(at,Math.Min(128,hex.Length-at)));
             rtf.Append(@"}\par ");
             if(rtf.Length>128*1024*1024)throw new InvalidOperationException("This guide is too large for the clipboard. Use Word DOCX export instead.");
+            }
         }
         rtf.Append('}');return new(rtf.ToString(),plain.ToString());
     }

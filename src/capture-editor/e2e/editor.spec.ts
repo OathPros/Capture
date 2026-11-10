@@ -36,6 +36,42 @@ test('host bridge: create, edit, save, reorder, undo, export and reopen',async({
 });
 test('browser without host explains unavailable native actions',async({page})=>{await page.goto('/');await expect(page.getByRole('alert')).toContainText('Open the Windows Capture application');});
 
+test('sections group steps with editable titles and optional numbering restart',async({page})=>{
+ await page.addInitScript(()=>{
+  let guide: any=null; const callbacks: ((e:any)=>void)[]=[];
+  (window as any).chrome={webview:{addEventListener:(_:string,fn:any)=>callbacks.push(fn),postMessage:(m:any)=>{
+   let result:any={};
+   if(m.type==='editor.ready')result={guide:null};
+   if(m.type==='project.new') {guide={schemaVersion:'1.3.0',id:crypto.randomUUID(),title:'Untitled guide',summary:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),steps:[],assets:[],sections:[]};result=guide;}
+   if(m.type==='project.list')result=guide?[guide]:[];
+   if(m.type==='project.save'){guide=m.payload;(window as any).__guide=guide;result={saved:true};}
+   setTimeout(()=>callbacks.forEach(fn=>fn({data:{requestId:m.requestId,ok:true,result}})),0);
+  }}};
+ });
+ await page.goto('/');await page.getByRole('button',{name:'New text guide'}).click();
+ for(const title of ['First action','Second action','Third action']){await page.getByRole('button',{name:'+ Add text step'}).click();await page.getByLabel('Step title',{exact:true}).fill(title);}
+ await expect(page.locator('aside .step-number')).toHaveText(['1.','2.','3.']);
+ await page.locator('aside li .step-select').nth(1).click();
+ await page.getByRole('button',{name:'+ Add section'}).click();
+ await expect(page.locator('aside li.section-heading')).toHaveCount(1);
+ await page.getByLabel('Section title').fill('Setup');
+ await expect(page.locator('aside li.in-section')).toHaveCount(1);
+ await expect(page.locator('aside li.in-section').first()).toContainText('Second action');
+ await expect(page.locator('.editor-kicker')).toContainText('STEP 2 OF 3 · SETUP');
+ await page.getByRole('button',{name:'Restart numbering for section Setup'}).click();
+ await expect(page.locator('aside .step-number')).toHaveText(['1.','1.','2.']);
+ if(!await page.getByLabel('Step section',{exact:true}).isVisible())await page.getByRole('button',{name:'Step details',exact:true}).click();
+ await page.locator('aside li .step-select').nth(2).click();await page.getByLabel('Step section',{exact:true}).selectOption({label:'Setup'});
+ await expect(page.locator('aside li.in-section')).toHaveCount(2);
+ await expect(page.locator('aside .step-number')).toHaveText(['1.','1.','2.']);
+ await page.getByRole('button',{name:'Collapse section Setup'}).click();await expect(page.locator('aside li.in-section')).toHaveCount(0);
+ await page.getByRole('button',{name:'Expand section Setup'}).click();await expect(page.locator('aside li.in-section')).toHaveCount(2);
+ await page.getByRole('button',{name:'Delete section Setup'}).click();
+ await expect(page.locator('aside li.section-heading')).toHaveCount(0);await expect(page.locator('aside li .step-select')).toHaveCount(3);
+ await expect(page.locator('aside .step-number')).toHaveText(['1.','2.','3.']);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('aside li.section-heading')).toHaveCount(1);
+});
+
 test('standalone HTML export works offline on desktop and mobile',async({page})=>{
  const sample=resolve(process.cwd(),'../../artifacts/export-samples/synthetic-guide.html');
  test.skip(!existsSync(sample),'Run scripts/test.ps1 or generate samples with CAPTURE_EXPORT_SAMPLES before this integration check.');

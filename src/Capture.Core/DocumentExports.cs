@@ -50,10 +50,14 @@ public static class DocumentExports
         body.Append(Paragraph(snapshot.Title, "Title"));
         if (!string.IsNullOrWhiteSpace(snapshot.Summary)) body.Append(Paragraph(snapshot.Summary));
         uint drawingId = 1;
-        for (int i = 0; i < snapshot.Steps.Count; i++)
+        var numbers = GuideNumbering.StepNumbers(snapshot);
+        foreach (var (section, start, count) in GuideNumbering.Runs(snapshot))
         {
-            var step = snapshot.Steps[i];
-            body.Append(Paragraph($"{i+1}. {step.Title}", "Heading1", step.TitleFields));
+            if (section is not null) body.Append(Paragraph(section.Title, "Heading2"));
+            for (int i = start; i < start + count; i++)
+            {
+                var step = snapshot.Steps[i];
+                body.Append(Paragraph($"{numbers[i]}. {step.Title}", "Heading1", step.TitleFields));
             if(!string.IsNullOrWhiteSpace(step.Instruction))
             {
                 var instruction = Paragraph(step.Instruction,fields:step.TitleFields);
@@ -76,7 +80,8 @@ public static class DocumentExports
             var scale = Math.Min(1, Math.Min(6.5 * 914400 / (image.Width * emuPerPixel), 6.5 * 914400 / (image.Height * emuPerPixel)));
             var width = Math.Max(1, (long)Math.Round(image.Width * emuPerPixel * scale));
             var height = Math.Max(1, (long)Math.Round(image.Height * emuPerPixel * scale));
-            body.Append(ImageParagraph(main.GetIdOfPart(part), drawingId++, width, height, $"Screenshot for step {i+1}: {step.Title}"));
+            body.Append(ImageParagraph(main.GetIdOfPart(part), drawingId++, width, height, $"Screenshot for step {numbers[i]}: {step.Title}"));
+            }
         }
         var footer = main.AddNewPart<FooterPart>();
         footer.Footer = new W.Footer(new W.Paragraph(
@@ -113,25 +118,46 @@ public static class DocumentExports
         await output.WriteAsync($"<header class=\"hero\"><div class=\"eyebrow\">STEP-BY-STEP GUIDE <span>· {snapshot.Steps.Count} {(snapshot.Steps.Count == 1 ? "STEP" : "STEPS")}</span></div><h1>{H(snapshot.Title)}</h1>");
         if (!string.IsNullOrWhiteSpace(snapshot.Summary)) await output.WriteAsync($"<p class=\"summary\">{H(snapshot.Summary)}</p>");
         await output.WriteAsync("</header>");
+        var numbers = GuideNumbering.StepNumbers(snapshot);
+        var runs = GuideNumbering.Runs(snapshot).ToArray();
         if (snapshot.Steps.Count > 0)
         {
-            await output.WriteAsync("<nav class=\"contents\" aria-label=\"Guide contents\"><h2>In this guide</h2><ol>");
-            for (int i = 0; i < snapshot.Steps.Count; i++)
-                await output.WriteAsync($"<li><a href=\"#step-{i+1}\">{StepText.Html(snapshot.Steps[i].Title,snapshot.Steps[i].TitleFields)}</a></li>");
+            await output.WriteAsync($"<nav class=\"contents{(runs.Any(r=>r.Section is not null)?" grouped":"")}\" aria-label=\"Guide contents\"><h2>In this guide</h2><ol>");
+            for (int run = 0; run < runs.Length; run++)
+            {
+                var (section, start, count) = runs[run];
+                if (section is not null)
+                {
+                    await output.WriteAsync($"<li class=\"toc-section\"><details open><summary><a href=\"#section-{run+1}\">{H(section.Title)}</a></summary><ol>");
+                    for (int i = start; i < start + count; i++)
+                        await output.WriteAsync($"<li><a href=\"#step-{i+1}\"><span class=\"toc-number\">{numbers[i]}.</span> {StepText.Html(snapshot.Steps[i].Title,snapshot.Steps[i].TitleFields)}</a></li>");
+                    await output.WriteAsync("</ol></details></li>");
+                }
+                else
+                    for (int i = start; i < start + count; i++)
+                        await output.WriteAsync($"<li><a href=\"#step-{i+1}\"><span class=\"toc-number\">{numbers[i]}.</span> {StepText.Html(snapshot.Steps[i].Title,snapshot.Steps[i].TitleFields)}</a></li>");
+            }
             await output.WriteAsync("</ol></nav>");
         }
-        for (int i = 0; i < snapshot.Steps.Count; i++)
+        for (int run = 0; run < runs.Length; run++)
         {
-            var step = snapshot.Steps[i];
-            await output.WriteAsync($"<article class=\"step\" id=\"step-{i+1}\"><div class=\"step-heading\"><span class=\"number\" aria-hidden=\"true\">{i+1:D2}</span><h2><span class=\"sr-only\">Step {i+1}: </span>{StepText.Html(step.Title,step.TitleFields)}</h2></div>");
-            if(!string.IsNullOrWhiteSpace(step.Instruction))await output.WriteAsync($"<p class=\"instruction\">{StepText.Html(step.Instruction,step.TitleFields)}</p>");
-            if (!string.IsNullOrWhiteSpace(step.Notes)) await output.WriteAsync($"<aside class=\"notes\"><strong>Note</strong><p>{H(step.Notes)}</p></aside>");
-            if (step.AssetId is not null)
+            var (section, start, count) = runs[run];
+            if (section is not null)
+                await output.WriteAsync($"<section class=\"guide-section\" id=\"section-{run+1}\"><h2 class=\"section-title\">{H(section.Title)}</h2>");
+            for (int i = start; i < start + count; i++)
             {
-                var image = await render(step); ValidateImage(image);
-                await output.WriteAsync($"<figure><img src=\"data:image/png;base64,{Convert.ToBase64String(image.Png)}\" width=\"{image.Width}\" height=\"{image.Height}\" alt=\"{H($"Screenshot for step {i+1}: {step.Title}")}\" loading=\"lazy\"><figcaption>Step {i+1} · {H(step.Title)}</figcaption></figure>");
+                var step = snapshot.Steps[i];
+                await output.WriteAsync($"<article class=\"step\" id=\"step-{i+1}\"><div class=\"step-heading\"><span class=\"number\" aria-hidden=\"true\">{numbers[i]:D2}</span><h2><span class=\"sr-only\">Step {numbers[i]}: </span>{StepText.Html(step.Title,step.TitleFields)}</h2></div>");
+                if(!string.IsNullOrWhiteSpace(step.Instruction))await output.WriteAsync($"<p class=\"instruction\">{StepText.Html(step.Instruction,step.TitleFields)}</p>");
+                if (!string.IsNullOrWhiteSpace(step.Notes)) await output.WriteAsync($"<aside class=\"notes\"><strong>Note</strong><p>{H(step.Notes)}</p></aside>");
+                if (step.AssetId is not null)
+                {
+                    var image = await render(step); ValidateImage(image);
+                    await output.WriteAsync($"<figure><img src=\"data:image/png;base64,{Convert.ToBase64String(image.Png)}\" width=\"{image.Width}\" height=\"{image.Height}\" alt=\"{H($"Screenshot for step {numbers[i]}: {step.Title}")}\" loading=\"lazy\"><figcaption>Step {numbers[i]} · {H(step.Title)}</figcaption></figure>");
+                }
+                await output.WriteAsync("</article>");
             }
-            await output.WriteAsync("</article>");
+            if (section is not null) await output.WriteAsync("</section>");
         }
         await output.WriteAsync("<footer><span>Created with CAPTURE</span><a href=\"#top\">Back to top ↑</a></footer></main></body></html>");
     }
@@ -145,8 +171,14 @@ public static class DocumentExports
         h1{font-size:clamp(32px,5vw,52px);line-height:1.13;letter-spacing:-1.5px;margin:18px 0 20px;overflow-wrap:anywhere}
         .summary{font-size:19px;line-height:1.65;max-width:760px;color:var(--muted);white-space:pre-wrap}
         .contents{margin:28px 0 40px;padding:24px 28px;background:#fff;border:1px solid var(--line);border-radius:12px}
-        .contents h2{font-size:15px;margin:0 0 10px}.contents ol{margin:0;padding-left:24px;columns:2;column-gap:40px}
+        .contents h2{font-size:15px;margin:0 0 10px}.contents ol{margin:0;padding-left:0;list-style:none;columns:2;column-gap:40px}
+        .contents.grouped>ol{columns:1}
         .contents li{padding:3px 0;break-inside:avoid}.contents a{overflow-wrap:anywhere;color:var(--muted);text-decoration:none}.contents a:hover{color:var(--accent);text-decoration:underline}
+        .toc-number{color:var(--accent);font-weight:600}.toc-section{break-inside:avoid}.toc-section>details>summary{cursor:pointer;padding:3px 0;font-weight:650;color:var(--ink);list-style:none;display:flex;gap:8px;align-items:center}
+        .toc-section>details>summary:before{content:'▾';color:var(--accent);font-size:12px;transition:transform .15s}.toc-section>details:not([open])>summary:before{transform:rotate(-90deg)}
+        .toc-section>details>summary a{flex:1}.toc-section ol{padding-left:26px;margin:2px 0 8px;columns:1}
+        .guide-section{margin:34px 0;padding:6px 0 8px 24px;border-left:3px solid var(--accent)}
+        .section-title{margin:0 0 6px;font-size:15px;font-weight:750;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent)}
         .step{margin:24px 0;padding:32px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 12px #20283305;overflow-wrap:anywhere}
         .step-heading{display:flex;gap:18px;align-items:flex-start;margin-bottom:18px}.number{color:var(--accent);background:#f9e9ed;border:1px solid #edcdd5;border-radius:9px;padding:5px 10px;font-weight:750;font-size:17px;font-variant-numeric:tabular-nums}
         .step h2{font-weight:500}.step h2 strong{font-weight:750}h2{font-size:24px;line-height:1.35;margin:3px 0 0;letter-spacing:-.4px}.instruction{margin:0 0 22px;white-space:pre-wrap}
@@ -156,7 +188,7 @@ public static class DocumentExports
         .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
         @media(max-width:640px){main{padding:28px 16px}.hero{padding-top:8px}.step{padding:22px 18px}.contents{padding:18px}.contents ol{columns:1}h2{font-size:21px}.summary{font-size:17px}}
         @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-        @page{size:letter;margin:.75in}@media print{body{background:#fff;font-size:11pt}main{max-width:none;padding:0}.hero{padding:0 0 20px}h1{font-size:30pt}.summary{font-size:12pt}.contents{display:none}.step{border:0;border-radius:0;box-shadow:none;padding:22px 0;margin:0;border-bottom:1px solid #ddd}.step-heading{break-after:avoid}h2{font-size:16pt}.instruction,.notes{orphans:3;widows:3}figure{break-inside:avoid}img{max-height:8in;object-fit:contain}footer a{display:none}.number{background:#fff;color:#202833;border-color:#aaa}}
+        @page{size:letter;margin:.75in}@media print{body{background:#fff;font-size:11pt}main{max-width:none;padding:0}.hero{padding:0 0 20px}h1{font-size:30pt}.summary{font-size:12pt}.contents{display:none}.guide-section{border:0;padding:0;margin:0}.section-title{font-size:12pt;margin:18pt 0 4pt}.step{border:0;border-radius:0;box-shadow:none;padding:22px 0;margin:0;border-bottom:1px solid #ddd}.step-heading{break-after:avoid}h2{font-size:16pt}.instruction,.notes{orphans:3;widows:3}figure{break-inside:avoid}img{max-height:8in;object-fit:contain}footer a{display:none}.number{background:#fff;color:#202833;border-color:#aaa}}
         """;
 
     private static void ValidateImage(ExportImage image) => GuideJson.ValidatePng(image.Png,
@@ -202,7 +234,10 @@ public static class DocumentExports
                 new W.StyleParagraphProperties(new W.KeepNext()), new W.StyleRunProperties(new W.Bold(), new W.FontSize { Val = "40" })) { Type = W.StyleValues.Paragraph, StyleId = "Title" },
             new W.Style(new W.StyleName { Val = "heading 1" }, new W.BasedOn { Val = "Normal" },
                 new W.StyleParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { Before = "240", After = "120" }, new W.OutlineLevel { Val = 0 }),
-                new W.StyleRunProperties(new W.FontSize { Val = "28" })) { Type = W.StyleValues.Paragraph, StyleId = "Heading1" });
+                new W.StyleRunProperties(new W.FontSize { Val = "28" })) { Type = W.StyleValues.Paragraph, StyleId = "Heading1" },
+            new W.Style(new W.StyleName { Val = "heading 2" }, new W.BasedOn { Val = "Normal" },
+                new W.StyleParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { Before = "360", After = "60" }, new W.OutlineLevel { Val = 1 }),
+                new W.StyleRunProperties(new W.Bold(), new W.Color { Val = "AD2540" }, new W.FontSize { Val = "22" })) { Type = W.StyleValues.Paragraph, StyleId = "Heading2" });
         part.Styles.Save();
     }
 

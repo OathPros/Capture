@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { request, onProjectChanged, onFlush, onHostError } from './bridge';
-import { Asset, Guide, Step, moveStepTo } from './model';
+import { Asset, Guide, Step, moveStepTo, sectionsOf, stepNumbers } from './model';
 import './style.css';
 import './workspace.css';
 import {ImageEditor} from './ImageEditor';
@@ -90,8 +90,22 @@ function App() {
  }
  function reorderStep(id:string,to:number){
   if(!guide||busy)return;const selectedId=guide.steps[selected]?.id,next=moveStepTo(guide,id,to);
-  if(next===guide)return;edit(next);select(Math.max(0,next.steps.findIndex(s=>s.id===selectedId)));
+  if(next===guide)return;
+  // A step dropped between two steps of the same section joins that section.
+  const at=next.steps.findIndex(s=>s.id===id),prev=next.steps[at-1]?.sectionId||null,following=next.steps[at+1]?.sectionId||null;
+  const steps=prev&&prev===following&&next.steps[at].sectionId!==prev?next.steps.map((s,i)=>i===at?{...s,sectionId:prev}:s):next.steps;
+  edit({...next,steps});select(Math.max(0,next.steps.findIndex(s=>s.id===selectedId)));
  }
+ function addSection(){
+  if(!guide||busy||!guide.steps.length||(guide.sections||[]).length>=1000)return;
+  const section={id:crypto.randomUUID(),title:'New section',restartNumbering:false};
+  const index=Math.min(selected,guide.steps.length-1);
+  edit({...guide,sections:[...sectionsOf(guide),section],steps:guide.steps.map((s,i)=>i===index?{...s,sectionId:section.id}:s)});
+  setStatus('Section created — add steps to it from Step details');
+ }
+ function renameSection(id:string,title:string){if(guide&&!busy)edit({...guide,sections:sectionsOf(guide).map(s=>s.id===id?{...s,title}:s)});}
+ function deleteSection(id:string){if(guide&&!busy)edit({...guide,sections:sectionsOf(guide).filter(s=>s.id!==id),steps:guide.steps.map(s=>s.sectionId===id?{...s,sectionId:null}:s)});}
+ function toggleRestart(id:string){if(guide&&!busy)edit({...guide,sections:sectionsOf(guide).map(s=>s.id===id?{...s,restartNumbering:!s.restartNumbering}:s)});}
  async function importImage(newStep: boolean) {
   await act(async()=>{
    await flush();
@@ -107,7 +121,7 @@ function App() {
    const steps=[...imported.steps];
    if(newStep){
     const index=steps.length?selected+1:0;
-    steps.splice(index,0,{id:crypto.randomUUID(),order:index+1,title:'New image step',instruction:'',notes:'',...change});
+    steps.splice(index,0,{id:crypto.randomUUID(),order:index+1,title:'New image step',instruction:'',notes:'',sectionId:steps[index-1]?.sectionId||null,...change});
     select(index);
    } else steps[selected]={...steps[selected],...change};
    const next={...imported,steps:steps.map((s,i)=>({...s,order:i+1}))};
@@ -134,6 +148,7 @@ function App() {
   await act(async()=>{await flush();await request('screenshot.capture',stepId?{stepId}:{});});
  }
  const step=guide?.steps[selected], asset=guide?.assets.find(a=>a.id===step?.assetId);
+ const sections=guide?sectionsOf(guide):[],numbers=guide?stepNumbers(guide):[],stepSection=sections.find(s=>s.id===step?.sectionId);
  return <div className="app-shell"><header className="app-header"><div className="brand"><img className="brand-mark" src="/capture-icon.png" width="40" height="40" alt="" aria-hidden="true"/><strong>Capture</strong></div> <nav className="app-nav"><div className="nav-group"><button disabled={busy} onClick={()=>void act(list)}>Projects</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();load(await request('project.new'));})}>New text guide</button><button disabled={busy} onClick={()=>void act(async()=>{await flush();const g=await request<Guide|null>('project.import');if(g)load(g);})}>Import package</button></div><div className="nav-group capture-actions"><button className="primary" disabled={busy} title={`Ctrl + Shift + ${shortcuts.screenshotHotkey}`} onClick={()=>void screenshot()}>Capture screenshot <kbd>Ctrl ⇧ {shortcuts.screenshotHotkey}</kbd></button><button className="record" disabled={busy} title={`Ctrl + Shift + ${shortcuts.hotkey}`} onClick={()=>void act(async()=>{await flush();await request('recording.toggle');})}><span aria-hidden="true">●</span> Record workflow <kbd>Ctrl ⇧ {shortcuts.hotkey}</kbd></button></div><span className="save-status" role="status" aria-live="polite">{status}</span></nav><div className="header-actions"><button className="quiet" aria-label={theme==='dark'?'Switch to light mode':'Switch to dark mode'} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'☀ Light mode':'☾ Dark mode'}</button><button className="quiet" disabled={busy} onClick={()=>void act(async()=>{await flush();const preferences=await request<Preferences>('settings.get');setSettings({...preferences,screenshotHotkey:preferences.screenshotHotkey||'S'});})}>Settings</button></div></header>
  {error && <div role="alert" className="error">{error}<button onClick={()=>setError('')}>Dismiss</button></div>}
 
@@ -145,16 +160,16 @@ function App() {
  {(pendingImages>0 || pendingOutput) && <section className="pixel-batch" aria-label="Apply image edits"><div><strong>{pendingOutput?'Finish edits and export':`${pendingImages} ${pendingImages===1?'image has':'images have'} blur/redaction edits`}</strong><p>Apply all edits permanently across this guide. This replaces original images and clears Undo.</p></div><button className="primary" disabled={busy} onClick={()=>void act(async()=>{const action=pendingOutput;if(await applyAll() && action)await output(action,true);})}>{pendingOutput?'Apply all and continue':'Apply all blur/redaction'}</button>{pendingOutput&&<button onClick={()=>setPendingOutput(null)}>Cancel export</button>}</section>}
 
  <div className={`workspace ${showDetails?'details-open':''}`}>
- <StepSidebar steps={guide.steps} selectedId={step?.id} busy={busy} onSelect={id=>select(guide.steps.findIndex(s=>s.id===id))} onDuplicate={duplicateStep} onDelete={deleteStep} onMove={reorderStep} onAddText={()=>{edit({...guide,steps:[...guide.steps,{id:crypto.randomUUID(),order:guide.steps.length+1,title:'New step',instruction:'',notes:'',assetId:null,annotations:[],needsReview:false}]});select(guide.steps.length);}} onAddImage={()=>void importImage(true)}/>
+ <StepSidebar steps={guide.steps} sections={sections} numbers={numbers} selectedId={step?.id} busy={busy} onSelect={id=>select(guide.steps.findIndex(s=>s.id===id))} onDuplicate={duplicateStep} onDelete={deleteStep} onMove={reorderStep} onAddText={()=>{edit({...guide,steps:[...guide.steps,{id:crypto.randomUUID(),order:guide.steps.length+1,title:'New step',instruction:'',notes:'',assetId:null,sectionId:guide.steps.at(-1)?.sectionId||null,annotations:[],needsReview:false}]});select(guide.steps.length);}} onAddImage={()=>void importImage(true)} onAddSection={addSection} onRenameSection={renameSection} onDeleteSection={deleteSection} onToggleRestart={toggleRestart}/>
  <main className="editor">
-  <div className="editor-kicker"><span className="eyebrow">{step?`STEP ${selected+1} OF ${guide.steps.length}`:'NO STEPS YET'}</span><div><span className="step-state">{step?.needsReview?'Draft':'Ready'}</span><button aria-expanded={showDetails} aria-controls="step-details" onClick={()=>setShowDetails(!showDetails)}>Step details</button></div></div>
+  <div className="editor-kicker"><span className="eyebrow">{step?`STEP ${numbers[selected]} OF ${guide.steps.length}${stepSection?` · ${stepSection.title.toUpperCase()}`:''}`:'NO STEPS YET'}</span><div><span className="step-state">{step?.needsReview?'Draft':'Ready'}</span><button aria-expanded={showDetails} aria-controls="step-details" onClick={()=>setShowDetails(!showDetails)}>Step details</button></div></div>
   {step ? <>
   <div className="step-heading"><label className="step-title-field">Step title<input ref={titleInput} value={step.title} onSelect={()=>setTitleSelection((titleInput.current?.selectionEnd||0)>(titleInput.current?.selectionStart||0))} onChange={e=>stepEdit({title:e.target.value})}/></label><div className="image-source-actions"><button className="primary" aria-label="Capture screenshot for step" title="Capture screenshot for this step" disabled={busy} onClick={()=>void screenshot(step.id)}>Capture</button><button aria-label={asset?'Replace image':'Add image'} title={asset?'Replace image':'Add image'} disabled={busy} onClick={()=>void importImage(false)}>{asset?'Replace image':'Add image'}</button>{asset&&<button aria-label="Remove image" title="Remove image" onClick={()=>stepEdit({assetId:null,annotations:[],crop:null,cuts:[],needsReview:true})}>×</button>}</div></div>
   {(titleSelection||!!step.titleFields?.length)&&<div className="title-format"><button disabled={!titleSelection} onMouseDown={e=>e.preventDefault()} onClick={()=>{const input=titleInput.current;if(!input)return;const text=step.title.slice(input.selectionStart||0,input.selectionEnd||0).trim();if(text&&text.length<=120)stepEdit({titleFields:[...new Set([...(step.titleFields||[]),text])].slice(-32)});}}>Bold field</button><button disabled={!step.titleFields?.length} onClick={()=>stepEdit({titleFields:[]})}>Clear bold</button><details className="formatted-preview"><summary>Preview title</summary><div className="title-preview" aria-label="Formatted step title"><FormattedText text={step.title} fields={step.titleFields}/></div></details></div>}
   {asset ? <ImageEditor key={`${step.id}:${asset.id}`} zoom={zoom} onZoom={setZoom} projectId={guide.id} asset={asset} step={step} onChange={change=>stepEdit({...change,needsReview:true})} onUndo={undo} onRedo={redo} canUndo={history.length>0} canRedo={future.length>0} onApplyPixels={()=>void act(async()=>{await flush();const result=await request<{guide:Guide;warning?:string}|null>('asset.applyPixelEdits',{assetId:asset.id});if(result){const index=selected;load(result.guide);select(index);if(result.warning)setError(result.warning);}})}/>:<div className="text-step-empty"><h2>Text step</h2><p>Add an image, capture a screenshot, or write instructions in Step details.</p>{!showDetails&&<button onClick={()=>setShowDetails(true)}>Edit step details</button>}</div>}
   </> : <div className="text-step-empty"><h2>Start your guide</h2><p>Add a step from the sidebar or capture a screenshot.</p></div>}
  </main>
- {showDetails&&<section className="step-details" id="step-details" aria-label="Step details"><div className="details-heading"><h2>Step details</h2><button aria-label="Close step details" onClick={()=>setShowDetails(false)}>×</button></div>{step&&<><label>Instruction<textarea placeholder="Optional details for this step." value={step.instruction} onChange={e=>stepEdit({instruction:e.target.value})}/></label><label>Notes<textarea value={step.notes} onChange={e=>stepEdit({notes:e.target.value})}/></label><label className="check"><input type="checkbox" checked={!step.needsReview} onChange={e=>stepEdit({needsReview:!e.target.checked})}/>I reviewed this step and screenshot</label></>}<details className="guide-introduction"><summary>Guide introduction</summary><label>Introduction<textarea value={guide.summary} onChange={e=>edit({...guide,summary:e.target.value})}/></label></details></section>}
+ {showDetails&&<section className="step-details" id="step-details" aria-label="Step details"><div className="details-heading"><h2>Step details</h2><button aria-label="Close step details" onClick={()=>setShowDetails(false)}>×</button></div>{step&&<><label>Section<select aria-label="Step section" value={step.sectionId||''} onChange={e=>stepEdit({sectionId:e.target.value||null})}><option value="">No section</option>{sections.map(s=><option key={s.id} value={s.id}>{s.title}</option>)}</select></label><label>Instruction<textarea placeholder="Optional details for this step." value={step.instruction} onChange={e=>stepEdit({instruction:e.target.value})}/></label><label>Notes<textarea value={step.notes} onChange={e=>stepEdit({notes:e.target.value})}/></label><label className="check"><input type="checkbox" checked={!step.needsReview} onChange={e=>stepEdit({needsReview:!e.target.checked})}/>I reviewed this step and screenshot</label></>}<details className="guide-introduction"><summary>Guide introduction</summary><label>Introduction<textarea value={guide.summary} onChange={e=>edit({...guide,summary:e.target.value})}/></label></details></section>}
  </div></>}
  </div></div>;
 }
