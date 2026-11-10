@@ -71,7 +71,7 @@
         <h2>Text2Speech</h2>
         <p>Prepare a narration script with local AI, choose a Kokoro voice, preview the audio, and export a WAV.</p>
         <a class="button" href="/text2speech/">Text2Speech downloads</a>
-        <div class="small">Version 1.1.0 · Windows 10 or later</div>
+        <div class="small" id="text2speech-version">Version 1.1.0 · Windows 10 or later</div>
       </article>
       <article class="card">
         <div class="eyebrow">Windows workflow documentation</div>
@@ -83,5 +83,23 @@
     </section>
   </main>
   <footer>DXLUKE · Apps and downloads</footer>
+  <script>
+    fetch("/text2speech/releases.json", { cache: "no-store" })
+      .then(response => {
+        if (!response.ok) throw new Error("Release list is unavailable.");
+        return response.json();
+      })
+      .then(releases => {
+        if (!Array.isArray(releases) || releases.length === 0) {
+          throw new Error("No published Text2Speech installer was found.");
+        }
+        document.getElementById("text2speech-version").textContent =
+          `Version ${releases[0].version} · Windows 10 or later`;
+      })
+      .catch(() => {
+        document.getElementById("text2speech-version").textContent =
+          "Latest version details are temporarily unavailable";
+      });
+  </script>
 </body>
 </html>
