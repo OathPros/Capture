@@ -27,6 +27,16 @@ html,body,#root{height:100%;overflow:hidden}
 .step-sidebar li:hover .step-row-actions,.step-sidebar li:focus-within .step-row-actions,.step-sidebar li.selected .step-row-actions{opacity:1;pointer-events:auto}
 .step-sidebar li button:hover{color:var(--text);background:var(--raised)}.step-row-actions button:last-child:hover{color:var(--error-text)}
 .step-sidebar li.drop-before:before,.step-sidebar li.drop-after:after{content:'';position:absolute;left:0;right:0;height:3px;background:var(--focus);z-index:2}.drop-before:before{top:-3px}.drop-after:after{bottom:-3px}
+.section-add{display:flex;padding:0 4px 8px;flex:none}.section-add button{flex:1;font-size:10px;padding:5px 4px;color:var(--muted)}
+.step-sidebar li.section-heading{display:flex;align-items:center;gap:2px;margin:10px 0 2px;padding:3px 4px;min-height:30px;border:1px solid var(--border);border-radius:7px;background:var(--subtle)}
+.step-sidebar li.section-heading:first-child{margin-top:2px}
+.section-heading .section-collapse{flex:none;width:18px;font-size:11px;padding:2px 0}
+.section-heading .section-title{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:3px 2px;margin:0}
+.section-heading .section-title:focus-visible{outline:2px solid var(--focus);outline-offset:0;border-radius:4px}
+.section-heading .section-count{flex:none;font-size:9px;color:var(--muted);padding:0 2px}
+.section-heading .section-restart{flex:none;width:22px;font-size:12px;opacity:.45}.section-heading .section-restart.active{opacity:1;color:var(--accent)}
+.section-heading .section-delete{flex:none;width:20px;font-size:14px;opacity:.45}.section-heading .section-restart:hover,.section-heading .section-delete:hover{opacity:1}
+.step-sidebar li.in-section{margin-left:9px;border-left:2px solid var(--accent);border-top-left-radius:3px;border-bottom-left-radius:3px;padding-left:4px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .workspace>.editor{min-height:0;min-width:0;padding:10px 12px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
 .editor-kicker{margin:0;min-height:25px;flex:none}.editor-kicker>div{display:flex;gap:10px;align-items:center}.editor-kicker button{font-size:11px;padding:4px 8px}.editor-kicker .eyebrow{font-size:9px}

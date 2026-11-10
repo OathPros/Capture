@@ -15,7 +15,7 @@ public sealed class ProjectStore(string root)
         {
             using var existing=System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(path));
             var version=existing.RootElement.GetProperty("schemaVersion").GetString();
-            if(version is "1.0.0" or "1.1.0")
+            if(version is "1.0.0" or "1.1.0" or "1.2.0")
             { var backup=Path.Combine(dir,$"guide.v{version[..3]}.backup.json");if(!File.Exists(backup))File.Copy(path,backup); }
         }
         var temp = path + ".tmp";
@@ -90,12 +90,18 @@ public sealed class ProjectStore(string root)
         static string Escape(string s) => string.Concat(s.Select(c => "\\`*_{}[]<>()#+-.!|".Contains(c) ? "\\" + c : c.ToString()));
         GuideJson.Validate(g);
         var b = new StringBuilder().AppendLine("<!-- CAPTURE Markdown export 1.0; guide schema " + g.SchemaVersion + " -->").AppendLine().AppendLine("# " + Escape(g.Title)).AppendLine().AppendLine(Escape(g.Summary));
-        foreach (var (s, i) in g.Steps.Select((s,i)=>(s,i)))
+        var numbers = GuideNumbering.StepNumbers(g);
+        foreach (var (section, start, count) in GuideNumbering.Runs(g))
         {
-            b.AppendLine().AppendLine($"## {i+1}. {StepText.Markdown(s.Title,s.TitleFields)}");
-            if(!string.IsNullOrWhiteSpace(s.Instruction))b.AppendLine().AppendLine(StepText.Markdown(s.Instruction,s.TitleFields));
-            if (!string.IsNullOrWhiteSpace(s.Notes)) b.AppendLine().AppendLine(Escape(s.Notes));
-            if (s.AssetId is not null) b.AppendLine().AppendLine($"![Step {i+1} screenshot](assets/step-{i+1:D3}.png)");
+            if (section is not null) b.AppendLine().AppendLine("## " + Escape(section.Title));
+            for (int i = start; i < start + count; i++)
+            {
+                var s = g.Steps[i];
+                b.AppendLine().AppendLine($"{(section is null ? "##" : "###")} {numbers[i]}. {StepText.Markdown(s.Title,s.TitleFields)}");
+                if(!string.IsNullOrWhiteSpace(s.Instruction))b.AppendLine().AppendLine(StepText.Markdown(s.Instruction,s.TitleFields));
+                if (!string.IsNullOrWhiteSpace(s.Notes)) b.AppendLine().AppendLine(Escape(s.Notes));
+                if (s.AssetId is not null) b.AppendLine().AppendLine($"![Step {numbers[i]} screenshot](assets/step-{i+1:D3}.png)");
+            }
         }
         return b.ToString();
     }

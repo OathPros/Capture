@@ -129,7 +129,7 @@ public static class ExportImageRenderer
         foreach(var a in edits.Where(a=>a.Kind=="blur")) Blur(bitmap,Bounds(a.X,a.Y,a.Width,a.Height,bitmap.Width,bitmap.Height),a.BlurRadius);
         using var graphics=Graphics.FromImage(bitmap);
         foreach(var a in edits.Where(a=>a.Kind=="redact"))
-        { using var brush=new SolidBrush(a.Fill=="transparent"?Color.Black:ColorOf(a.Fill));graphics.FillRectangle(brush,Bounds(a.X,a.Y,a.Width,a.Height,bitmap.Width,bitmap.Height)); }
+        { using var brush=new SolidBrush(a.Fill=="transparent"?ColorTranslator.FromHtml("#202833"):ColorOf(a.Fill));graphics.FillRectangle(brush,Bounds(a.X,a.Y,a.Width,a.Height,bitmap.Width,bitmap.Height)); }
     }
 
     private static void Blur(Bitmap bitmap, Rectangle area, int radius)
