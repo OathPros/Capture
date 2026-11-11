@@ -319,7 +319,8 @@ body.page-capture .brand .mark { width: 36px; height: 36px; border: 1px solid va
 body.page-capture nav { gap: 24px; }
 body.page-capture main { width: min(900px, calc(100% - 64px)); margin: 0 auto; padding: 0; }
 body.page-capture .hero { padding: 70px 0 35px; }
-body.page-capture .hero h1, body.page-text2speech h1 { max-width: 760px; margin: 17px 0; font: 400 clamp(52px, 7vw, 78px)/1 var(--serif); letter-spacing: -.05em; }
+body.page-capture .hero h1, body.page-text2speech h1 { margin: 17px 0; font: 400 clamp(52px, 7vw, 78px)/1 var(--serif); letter-spacing: -.05em; }
+body.page-text2speech h1 { max-width: 760px; }
 body.page-capture .hero h1 em { color: var(--accent); }
 body.page-capture .lead, body.page-text2speech .intro { max-width: 580px; color: var(--muted); font-size: 17px; }
 body.page-capture .card, body.page-text2speech .card {
