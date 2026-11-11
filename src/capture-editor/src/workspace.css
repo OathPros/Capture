@@ -5,7 +5,7 @@ html,body,#root{height:100%;overflow:hidden}
 .brand{gap:8px;flex:none}.brand strong{font-size:20px}.brand-mark{width:32px;height:32px}
 .app-header .app-nav{padding:0;border:0;background:transparent;flex:1;gap:10px;min-width:0;flex-wrap:nowrap}
 .app-nav .nav-group{gap:4px;flex:none}.app-nav button{padding:7px 9px;font-size:12px}.app-nav kbd{font-size:9px;margin-left:4px}
-.header-actions{gap:2px;flex:none}.header-actions button{font-size:11px;padding:7px}.save-status{font-size:10px;min-width:0;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.header-actions{gap:2px;flex:none}.header-actions button{font-size:11px;padding:7px}.save-status{font-size:10px;min-width:0;overflow-wrap:anywhere}
 .page-content{flex:1;min-height:0;overflow:auto}.page-content.editing-page{display:flex;flex-direction:column;overflow:hidden}
 .document-header{padding:8px 18px;gap:16px;flex:none;min-height:60px}.document-identity input{font-size:19px}.document-identity .eyebrow{font-size:9px}.document-actions button,.export-menu>summary{font-size:12px;padding:7px 10px}
 .app-shell>.error{flex:none;max-height:20vh;overflow:auto}.pixel-batch{padding:8px 16px;gap:12px;flex:none}.pixel-batch p{font-size:11px}.pixel-batch button{font-size:11px}.pixel-batch strong{font-size:12px}
@@ -20,7 +20,7 @@ html,body,#root{height:100%;overflow:hidden}
 .step-sidebar .step-drag{width:17px;flex:none;cursor:grab;font-size:17px;touch-action:none;opacity:.5}
 .step-sidebar .step-select{display:flex;align-items:start;gap:4px;min-width:0;flex:1;width:auto;text-align:left;line-height:1.5;padding:6px 2px}
 .step-sidebar .step-select[aria-current=step]{background:transparent;color:var(--text);border-color:transparent}
-.step-number{flex:none;opacity:.7}.step-name{overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.step-number{flex:none;opacity:.7}.step-name{display:block;overflow-wrap:anywhere}
 .review-dot{width:5px;height:5px;margin-top:5px;flex:none;border-radius:50%;background:#d7a75e}
 .step-row-actions{display:flex;gap:1px;flex:none;opacity:0;pointer-events:none}.step-row-actions button{width:23px;height:27px;display:grid;place-items:center}
 .step-row-actions svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
