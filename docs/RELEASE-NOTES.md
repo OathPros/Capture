@@ -1,3 +1,10 @@
+# YU Capture 0.7 — Guide sections and pixel-edit parity
+
+- Added titled guide sections with collapsible sidebar groups, optional per-section step-number resets, and section headings/grouping across HTML, DOCX, Markdown, and Word clipboard exports.
+- Fixed redaction color parity so export and permanent application match the editor preview. A regression test verifies that applying blur/redaction does not otherwise change the flattened export.
+
+---
+
 # YU Capture 0.6.0-preview.1 — Fit images and faster step editing
 
 - **Real Fit image:** contains the complete screenshot within both canvas dimensions, including portrait, cropped and cut images. Fit width is a separate option. View resizing and contextual tools automatically recalculate Fit.

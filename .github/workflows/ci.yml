@@ -64,7 +64,7 @@ jobs:
           name: Capture-Windows-x64-preview
           path: |
             artifacts/YU-Capture-*-Setup-x64.exe
-            artifacts/Capture-0.6.0-preview.1-win-x64.zip
+            artifacts/Capture-*-win-x64.zip
             artifacts/Capture-export-examples.zip
           if-no-files-found: error
   release:

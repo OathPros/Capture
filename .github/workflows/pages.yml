@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
     paths: ['index.html', 'capture/**', 'text2speech/**', '.github/workflows/pages.yml']
+  release:
+    types: [published]
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
@@ -31,6 +33,38 @@ jobs:
           cp -R capture/. page/capture/
           cp -R text2speech/. page/text2speech/
           touch page/.nojekyll
+
+      - name: Refresh Capture release catalog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const allReleases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner: "OathPros", repo: "Capture", per_page: 100 }
+            );
+            const releases = allReleases
+              .filter(release => !release.draft)
+              .map(release => {
+                const version = release.tag_name.replace(/^v/, "");
+                const installer = release.assets.find(
+                  asset => asset.name === `YU-Capture-${version}-Setup-x64.exe`
+                );
+                if (!installer) return null;
+                return { version, publishedAt: release.published_at };
+              })
+              .filter(Boolean)
+              .sort((left, right) =>
+                Date.parse(right.publishedAt) - Date.parse(left.publishedAt)
+              );
+            if (releases.length === 0) {
+              core.setFailed("No Capture releases with installer assets were found.");
+              return;
+            }
+            fs.writeFileSync(
+              "page/capture/releases.json",
+              JSON.stringify(releases, null, 2) + "\n"
+            );
 
       - name: Refresh Text2Speech release catalog
         uses: actions/github-script@v7

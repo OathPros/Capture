@@ -1,8 +1,8 @@
-# CAPTURE — Windows preview
+# YU Capture 0.7
 
 CAPTURE records mouse interactions across Windows applications and turns them into an editable local guide with screenshots and click highlights. This repository now includes application source, a bundled React editor, tests, and Windows packaging, with Word, Markdown and self-contained HTML exports.
 
-**Early preview, not the completed V1 specification.** The application compiles and deterministic tests run, but interactive Windows capture has not been verified in this Linux development session. Use synthetic data first. See [current status](docs/STATUS.md) and [manual checks](docs/MANUAL-TESTS.md).
+**Early preview, not the completed V1 specification.** The application builds and deterministic tests run, but interactive desktop capture still requires manual Windows validation. Use synthetic data first. See [current status](docs/STATUS.md) and [manual checks](docs/MANUAL-TESTS.md).
 
 ## Download and run
 
@@ -12,7 +12,7 @@ CAPTURE records mouse interactions across Windows applications and turns them in
 4. To update, exit Capture from its tray icon and run the newer installer. To uninstall, use **Windows Settings → Apps → YU Capture**. Uninstall preserves saved projects under `%LOCALAPPDATA%\Capture`; back up full project folders before upgrades. Older app versions cannot open guides upgraded to newer schemas.
 5. This preview remains unsigned. Windows or organizational policies may block it. Follow your organization’s approval process.
 
-**Download:** [YU Capture download page](https://oathpros.github.io/Capture/) · [Windows installer](https://github.com/OathPros/Capture/releases/download/v0.6.0-preview.1/YU-Capture-0.6.0-preview.1-Setup-x64.exe). Portable ZIPs are also available on GitHub Releases for advanced users; these require manual extraction and a separately installed WebView2 runtime if missing.
+**Download:** [YU Capture download page](https://dxluke.com/capture/) · [Windows installer](https://github.com/OathPros/Capture/releases/download/v0.7/YU-Capture-0.7-Setup-x64.exe). Portable ZIPs are also available on GitHub Releases for advanced users; these require manual extraction and a separately installed WebView2 runtime if missing.
 
 See [installer design and release checks](docs/INSTALLER.md). The optional `Capture-export-examples.zip` contains synthetic sample exports.
 
@@ -49,6 +49,8 @@ Use synthetic data for the preview. Pause around sensitive material and inspect 
 If a UIA provider hangs, finishing stops waiting after ten seconds and tells you to restart. Already saved drafts remain available. A hung background worker cannot be safely canceled inside its COM call; restart before another recording. Guides exceeding 10,000 steps or packages over 512 MB are rejected. Monitor sampling uses at most two recent PNG frames (one active monitor at a time).
 
 ## Build from source
+
+Release versions advance by one decimal step: `0.7`, `0.8`, `0.9`, then `1.0`. Set the next version in `src/Capture.App/Capture.App.csproj`; packaging and release assets use it automatically.
 
 Windows prerequisites: .NET **10.0.403** SDK (or compatible patch via global.json), Node **24 LTS**, Git, WebView2 Runtime, PowerShell.
 
