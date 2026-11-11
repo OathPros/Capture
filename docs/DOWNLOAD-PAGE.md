@@ -1,10 +1,12 @@
 # YU Capture download page
 
-The repository-root `index.html` is a standalone, responsive download page. Without JavaScript it links directly to the published v0.6.0-preview.1 Windows installer. When JavaScript is available, it retrieves public GitHub releases (including previews), selects the most recently published release with a Windows x64 package and prefers its Setup EXE over its portable ZIP, and displays earlier downloadable releases. Publishing a new GitHub release updates the page automatically; no HTML edit is required. It shows up to 500 releases and links to the complete GitHub archive.
+`capture/index.html` is the standalone, responsive Capture download page. Without JavaScript it links directly to the v0.7 Windows installer. When JavaScript is available, it retrieves public GitHub releases (including previews), selects the most recently published release with a Windows x64 package and prefers its Setup EXE over its portable ZIP, and displays earlier downloadable releases. Publishing a new GitHub release updates the page automatically; no HTML edit is required. It shows up to 500 releases and links to the complete GitHub archive.
+
+The repository-root `index.html` is the DXLUKE landing page. It displays the latest Capture version from `capture/releases.json`, which the Pages workflow refreshes on release publication and every 15 minutes.
 
 ## Put it online
 
-The live page is **https://oathpros.github.io/Capture/**. `.github/workflows/pages.yml` deploys only `index.html` on main-branch page changes; application source and intermediate files are excluded. GitHub Pages deployment succeeded after PR #1 merged.
+The DXLUKE home page is **https://dxluke.com/** and the Capture download page is **https://dxluke.com/capture/**. `.github/workflows/pages.yml` deploys the home and app pages plus generated release catalogs on main-branch changes, release publication, manual dispatch and its 15-minute schedule; application source and intermediate files are excluded.
 
 Alternatively, upload `index.html` to an existing web server. No build process, server code, or dependencies are required.
 
@@ -16,4 +18,4 @@ Publish the installer as `YU-Capture-<version>-Setup-x64.exe`; the portable fall
 
 ## Verification
 
-Inline JavaScript syntax and simulated release loading were checked, including sorting previews, archive rendering, single-release handling, API failure and rejection of download URLs outside the repository. Live GitHub release metadata, uploaded installer asset and successful GitHub Pages deployment were verified through the connected GitHub tools. Visual browser verification was unavailable in the development environment. The static installer link is pinned to 0.6.0-preview.1; JavaScript refreshes it from later published releases.
+Inline JavaScript syntax and simulated release loading were checked, including sorting previews, archive rendering, single-release handling, API failure and rejection of download URLs outside the repository. Live GitHub release metadata, uploaded installer asset and successful GitHub Pages deployment were verified through the connected GitHub tools. Visual browser verification was unavailable in the development environment. The static installer link is pinned to 0.7; JavaScript refreshes it from later published releases.

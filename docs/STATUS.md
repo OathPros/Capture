@@ -1,12 +1,12 @@
-# Current version — 0.6.0-preview.1
+# Current version — 0.7
 
-## Unreleased — sections and pixel-edit parity
+## 0.7 — Guide sections and pixel-edit parity
 - Guide schema 1.3.0 adds titled sections (`sections` on the guide, `sectionId` on steps, `restartNumbering` per section). Older 1.0–1.2 guides load unchanged and back up before the first 1.3.0 save. Unknown/duplicate section references are rejected.
 - The sidebar groups steps under editable section headers with step counts, collapse/expand, restart-numbering toggles and delete (steps stay in the guide). "+ Add section" starts a section at the selected step; steps are reassigned from Step details, and a step dropped between two steps of the same section joins it. New/duplicated/image steps inherit the surrounding section.
 - Step numbering is shared across the guide by default; sections with restart numbering begin again at 1 per contiguous run, and the shared count resumes after. The same numbering appears in the sidebar, the editor kicker, and every export.
 - HTML exports group steps in visually bounded section blocks with heading anchors, and the "In this guide" contents nests collapsible section groups (script-free `<details>`, print-safe). DOCX gains Heading2 section titles, Markdown nests section steps one heading level deeper, and Word clipboard RTF includes section headings.
 - Redaction parity fix: a transparent-fill redact previewed as dark slate `#202833` in the editor but exported/baked as pure black; exports and permanent application now use the editor colour. A regression test proves the flattened export is byte-identical before and after applying blur/redaction — crop, cuts and all other annotation coordinates stay exactly in place.
-- Local validation: .NET 10.0.403 Release build with zero warnings; 74 core + 25 Windows tests pass (the clipboard test also fails on unmodified main in this non-interactive session); 17 editor unit tests and 24 browser tests pass, including a section grouping/numbering flow. Sectioned HTML/DOCX samples were rendered and inspected. Windows CI and interactive validation remain outstanding.
+- Validation in this session: .NET 10.0.403 Release build succeeds with zero warnings; 74 core tests, 17 editor unit tests and 24 browser tests pass. 24 of 26 Windows tests pass; UIA control lookup and clipboard content were unavailable in this non-interactive run. The 0.7 installer/portable ZIP, packaged WebView2 smoke test, and install/reinstall/uninstall checks pass. Interactive capture, hotkeys and real UIA still require manual Windows validation.
 
 ## 0.6.0-preview.1
 

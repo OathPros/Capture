@@ -104,7 +104,14 @@ public partial class MainWindow : Window
             object? result = r.GetProperty("type").GetString() switch
             {
                 "app.flushComplete" => CompleteFlush(p),
-                "editor.ready" => new { version = "0.6.0-preview.1", guide = current, recording = session.State.ToString(), issues = startupIssues },
+                "editor.ready" => new
+                {
+                    version = (typeof(MainWindow).Assembly.GetName().Version
+                        ?? throw new InvalidOperationException("The application assembly version is unavailable.")).ToString(2),
+                    guide = current,
+                    recording = session.State.ToString(),
+                    issues = startupIssues
+                },
                 "settings.get" => new { hotkey = ((char)hotkey).ToString(), screenshotHotkey = ((char)screenshotHotkey).ToString(), hotkeyRegistered, screenshotHotkeyRegistered, exclusions },
                 "settings.update" => await UpdateSettingsAsync(p),
                 "app.theme" => SetTheme(p.GetProperty("theme").GetString()),

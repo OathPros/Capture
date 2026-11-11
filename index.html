@@ -78,12 +78,29 @@
         <h2>YU Capture</h2>
         <p>Record a workflow, refine its screenshots, and share a clear step-by-step guide.</p>
         <a class="button" href="/capture/">YU Capture downloads</a>
-        <div class="small">Windows 11 x64</div>
+        <div class="small" id="capture-version">Version 0.7 · Windows 11 x64</div>
       </article>
     </section>
   </main>
   <footer>DXLUKE · Apps and downloads</footer>
   <script>
+    fetch("/capture/releases.json", { cache: "no-store" })
+      .then(response => {
+        if (!response.ok) throw new Error("Release list is unavailable.");
+        return response.json();
+      })
+      .then(releases => {
+        if (!Array.isArray(releases) || releases.length === 0) {
+          throw new Error("No published Capture installer was found.");
+        }
+        document.getElementById("capture-version").textContent =
+          `Version ${releases[0].version} · Windows 11 x64`;
+      })
+      .catch(() => {
+        document.getElementById("capture-version").textContent =
+          "Latest version details are temporarily unavailable";
+      });
+
     fetch("/text2speech/releases.json", { cache: "no-store" })
       .then(response => {
         if (!response.ok) throw new Error("Release list is unavailable.");
