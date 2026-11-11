@@ -3,86 +3,92 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#faf8f7">
-  <meta name="description" content="DXLUKE apps and downloads for Windows.">
-  <title>DXLUKE - Apps</title>
-  <style>
-    :root {
-      color-scheme: light;
-      font-family: system-ui, sans-serif;
-      color: #252025;
-      background: #faf8f7;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; line-height: 1.65; }
-    a { color: #b4152d; text-underline-offset: 4px; }
-    a:focus-visible { outline: 3px solid #b4152d; outline-offset: 5px; }
-    header, main, footer { max-width: 1000px; margin: auto; padding: 0 28px; }
-    header {
-      height: 94px;
-      border-bottom: 1px solid #e6dfe2;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .brand { color: #252025; font-size: 21px; font-weight: 800; letter-spacing: -.7px; text-decoration: none; }
-    nav { font-size: 14px; }
-    nav a { color: #70666c; text-decoration: none; }
-    .hero { padding: 60px 0 32px; }
-    .eyebrow {
-      color: #b4152d;
-      font-size: 12px;
-      font-weight: 750;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    h1 { margin: 18px 0 20px; font-size: clamp(38px, 6vw, 62px); line-height: 1.1; letter-spacing: -2px; }
-    h2 { margin: 10px 0; font-size: 25px; letter-spacing: -.7px; }
-    .lead { max-width: 650px; color: #70666c; font-size: 19px; }
-    .apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; padding: 18px 0 54px; }
-    .card { padding: 30px; border: 1px solid #e6dfe2; border-top: 4px solid #b4152d; border-radius: 12px; background: #fff; }
-    .card p { min-height: 78px; color: #70666c; }
-    .button { display: inline-block; padding: 13px 22px; border-radius: 7px; background: #b4152d; color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; }
-    .button:hover { background: #921125; }
-    .small { color: #70666c; font-size: 13px; }
-    footer { padding-top: 24px; padding-bottom: 35px; border-top: 1px solid #e6dfe2; color: #70666c; font-size: 12px; }
-    @media (max-width: 650px) {
-      header, main, footer { padding-left: 20px; padding-right: 20px; }
-      .hero { padding-top: 38px; }
-      .apps { grid-template-columns: 1fr; }
-      .card p { min-height: 0; }
-    }
-  </style>
+  <meta name="theme-color" content="#080b0e">
+  <meta name="description" content="Independent Windows tools for clearer work.">
+  <title>DXLUKE — Local Windows Software</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700&family=Xanh+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/site.css">
 </head>
-<body>
-  <header>
-    <a class="brand" href="/">DXLUKE</a>
-    <nav aria-label="Main navigation"><a href="#apps">Apps</a></nav>
+<body class="page-home">
+  <header class="site-header">
+    <a class="site-brand" href="/" aria-label="DXLUKE home">
+      <span class="brand-glyph" aria-hidden="true">DX</span>
+      <strong>DXLUKE<span class="period">.</span></strong>
+    </a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#apps">Apps</a>
+      <a href="/text2speech/">Text2Speech</a>
+      <a href="/capture/">Capture</a>
+    </nav>
   </header>
-  <main>
-    <section class="hero">
-      <div class="eyebrow">Apps and downloads</div>
-      <h1>Tools for getting work done.</h1>
-      <p class="lead">Explore DXLUKE apps for creating clear voiceovers and documenting Windows workflows.</p>
+  <main class="shell">
+    <section class="home-hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Local software / Windows</div>
+        <h1 class="hero-title">Useful tools.<br><em>No noise.</em></h1>
+        <p class="hero-deck">Independent apps for making work clearer. Your files stay yours.</p>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="orbit"></div>
+        <div class="terminal-window">
+          <div class="terminal-top">
+            <span>DXLUKE / SYSTEM</span>
+            <span class="terminal-dots"><i></i><i></i><i></i></span>
+          </div>
+          <div class="terminal-body">
+            <p class="comment">// small tools, real work</p>
+            <p><span class="prompt">$</span> open apps</p>
+            <div class="terminal-rule"></div>
+            <p class="command">01 &nbsp; VOICE<span class="value"> / LOCAL</span></p>
+            <p class="command">02 &nbsp; GUIDES<span class="value"> / WINDOWS</span></p>
+            <p><span class="prompt">$</span> ready<span class="cursor"></span></p>
+          </div>
+        </div>
+      </div>
     </section>
-    <section class="apps" id="apps" aria-label="Available apps">
-      <article class="card">
-        <div class="eyebrow">Windows voiceover studio</div>
-        <h2>Text2Speech</h2>
-        <p>Prepare a narration script with local AI, choose a Kokoro voice, preview the audio, and export a WAV.</p>
-        <a class="button" href="/text2speech/">Text2Speech downloads</a>
-        <div class="small" id="text2speech-version">Version 1.1.0 · Windows 10 or later</div>
-      </article>
-      <article class="card">
-        <div class="eyebrow">Windows workflow documentation</div>
-        <h2>YU Capture</h2>
-        <p>Record a workflow, refine its screenshots, and share a clear step-by-step guide.</p>
-        <a class="button" href="/capture/">YU Capture downloads</a>
-        <div class="small" id="capture-version">Version 0.7 · Windows 11 x64</div>
-      </article>
+
+    <section id="apps" aria-labelledby="apps-heading">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Choose your tool</div>
+          <h2 class="section-title" id="apps-heading">Built to stay out of the way.</h2>
+        </div>
+        <span class="section-count">02 / APPS</span>
+      </div>
+      <div class="app-grid">
+        <article class="app-card" data-product="speech">
+          <div class="app-card-top">
+            <span class="app-index">01 / VOICE</span>
+            <span class="platform">WINDOWS 10+</span>
+          </div>
+          <h2>Text2Speech</h2>
+          <p>Write locally. Find the voice. Export a WAV.</p>
+          <div class="app-card-bottom">
+            <a class="app-card-link" href="/text2speech/">Open Text2Speech <span aria-hidden="true">↗</span></a>
+            <span class="app-version" id="text2speech-version" aria-live="polite">Version 1.1.0</span>
+          </div>
+        </article>
+        <article class="app-card" data-product="capture">
+          <div class="app-card-top">
+            <span class="app-index">02 / GUIDES</span>
+            <span class="platform">WINDOWS 11</span>
+          </div>
+          <h2>YU Capture</h2>
+          <p>Record the steps. Make the process clear.</p>
+          <div class="app-card-bottom">
+            <a class="app-card-link" href="/capture/">Open YU Capture <span aria-hidden="true">↗</span></a>
+            <span class="app-version" id="capture-version" aria-live="polite">Version 0.7</span>
+          </div>
+        </article>
+      </div>
     </section>
   </main>
-  <footer>DXLUKE · Apps and downloads</footer>
+  <footer class="site-footer">
+    <span>DXLUKE<span class="period">.</span> / BUILT FOR WINDOWS</span>
+    <a href="https://github.com/OathPros">Source & releases ↗</a>
+  </footer>
   <script>
     fetch("/capture/releases.json", { cache: "no-store" })
       .then(response => {
@@ -94,11 +100,10 @@
           throw new Error("No published Capture installer was found.");
         }
         document.getElementById("capture-version").textContent =
-          `Version ${releases[0].version} · Windows 11 x64`;
+          `Version ${releases[0].version}`;
       })
       .catch(() => {
-        document.getElementById("capture-version").textContent =
-          "Latest version details are temporarily unavailable";
+        document.getElementById("capture-version").textContent = "VERSION OFFLINE";
       });
 
     fetch("/text2speech/releases.json", { cache: "no-store" })
@@ -111,11 +116,10 @@
           throw new Error("No published Text2Speech installer was found.");
         }
         document.getElementById("text2speech-version").textContent =
-          `Version ${releases[0].version} · Windows 10 or later`;
+          `Version ${releases[0].version}`;
       })
       .catch(() => {
-        document.getElementById("text2speech-version").textContent =
-          "Latest version details are temporarily unavailable";
+        document.getElementById("text2speech-version").textContent = "VERSION OFFLINE";
       });
   </script>
 </body>

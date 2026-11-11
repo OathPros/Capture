@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#faf8f7">
+  <meta name="theme-color" content="#080b0e">
   <meta name="description" content="Text2Speech is a private, local Windows voiceover studio.">
   <title>Text2Speech - Local Voiceover Studio</title>
   <style>
@@ -80,45 +80,40 @@
       .card { padding: 28px 22px; }
     }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700&family=Xanh+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/site.css">
 </head>
-<body>
-  <header><strong>Text2Speech</strong><a href="/">DXLUKE - All apps</a></header>
+<body class="page-text2speech">
+  <header>
+    <a class="site-brand" href="/"><span class="brand-glyph" aria-hidden="true">DX</span><strong>DXLUKE<span class="period">.</span></strong></a>
+    <a href="/">All tools ↗</a>
+  </header>
   <main>
     <section class="card">
-      <div class="eyebrow">Windows voiceover studio</div>
-      <h1>Turn your script into speech.</h1>
-      <p class="intro">
-        Prepare narration with a local AI writing assistant, choose a Kokoro voice,
-        preview your audio, and export the finished narration. Your scripts stay
-        on your computer.
-      </p>
+      <div class="eyebrow">Local voice / Windows</div>
+      <h1>Give words a voice.</h1>
+      <p class="intro">Write locally. Choose a voice. Export a WAV. Your scripts stay yours.</p>
       <a class="download" id="latest-download" href="https://github.com/OathPros/txt2speech/releases/latest/download/Text2Speech-Setup-1.1.0.exe">
         Download Text2Speech 1.1.0 for Windows
       </a>
       <div class="meta" id="latest-release-meta">Version 1.1.0 · 64-bit · 705 MB · Per-user install, no administrator required</div>
       <div class="release-history">
-        <h2>Previous versions</h2>
+        <h2>Earlier versions</h2>
         <p id="release-status" class="release-status" aria-live="polite">Loading release history…</p>
         <ul id="previous-releases" class="release-list"></ul>
       </div>
       <div class="details">
-        <div class="detail">
-          <strong>Local and private</strong>
-          <p>Qwen script assistance and Kokoro speech generation run locally.</p>
-        </div>
-        <div class="detail">
-          <strong>First AI use</strong>
-          <p>The installer includes Kokoro. Qwen downloads automatically the first time you use AI features.</p>
-        </div>
-        <div class="detail">
-          <strong>Compatible with Windows</strong>
-          <p>For 64-bit Windows 10 or later. Internet is only needed for the initial Qwen download.</p>
-        </div>
+        <div class="detail"><strong>LOCAL AI</strong></div>
+        <div class="detail"><strong>PRIVATE BY DESIGN</strong></div>
+        <div class="detail"><strong>WINDOWS 10+</strong></div>
       </div>
     </section>
   </main>
   <footer>
-    <a href="https://github.com/OathPros/txt2speech/releases">Release notes and downloads</a>
+    <span>TEXT2SPEECH / LOCAL VOICE</span>
+    <a href="https://github.com/OathPros/txt2speech/releases">Source & releases ↗</a>
   </footer>
   <script>
     const releaseStatus = document.getElementById("release-status");

@@ -2,7 +2,7 @@ name: Publish download pages
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'capture/**', 'text2speech/**', '.github/workflows/pages.yml']
+    paths: ['index.html', 'site.css', 'capture/**', 'text2speech/**', '.github/workflows/pages.yml']
   release:
     types: [published]
   workflow_dispatch:
@@ -30,6 +30,7 @@ jobs:
         run: |
           mkdir -p page/capture page/text2speech
           cp index.html page/index.html
+          cp site.css page/site.css
           cp -R capture/. page/capture/
           cp -R text2speech/. page/text2speech/
           touch page/.nojekyll
