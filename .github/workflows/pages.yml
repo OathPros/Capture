@@ -10,6 +10,7 @@ on:
     - cron: '*/15 * * * *'
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -111,6 +112,26 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: page
+      # The artifact upload API can finish before the Actions metadata API lists it.
+      - name: Wait for Pages artifact registration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            for (let attempt = 1; attempt <= 12; attempt++) {
+              const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner, repo, run_id: context.runId, per_page: 100
+              });
+              if (data.artifacts.some(a => a.name === "github-pages" && !a.expired)) {
+                core.info(`Pages artifact is available (attempt ${attempt}/12).`);
+                return;
+              }
+              if (attempt < 12) {
+                core.info(`Pages artifact not indexed yet (attempt ${attempt}/12); retrying in 5 seconds.`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+            }
+            core.setFailed("Uploaded Pages artifact did not become visible to GitHub Actions within 55 seconds.");
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
